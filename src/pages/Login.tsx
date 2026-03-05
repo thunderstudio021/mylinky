@@ -1,60 +1,41 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Flame, Eye, EyeOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Eye, EyeOff } from "lucide-react";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
-      >
+      <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Flame className="w-10 h-10 text-primary" />
-            <span className="text-3xl font-bold text-foreground">FanVault</span>
-          </div>
-          <p className="text-muted-foreground">Sign in to your account</p>
+          <h1 className="text-2xl font-semibold text-foreground mb-1">FanVault</h1>
+          <p className="text-sm text-muted-foreground">Entre na sua conta</p>
         </div>
 
-        <div className="bg-card border border-border/50 rounded-xl p-6 space-y-5">
-          <div className="space-y-2">
-            <Label className="text-foreground">Email</Label>
-            <Input type="email" placeholder="your@email.com" className="bg-secondary border-border focus:border-primary" />
+        <div className="bg-card border border-border rounded-lg p-5 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Email</label>
+            <input type="email" placeholder="seu@email.com" className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-muted-foreground transition-colors" />
           </div>
-          <div className="space-y-2">
-            <Label className="text-foreground">Password</Label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Senha</label>
             <div className="relative">
-              <Input
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                className="bg-secondary border-border focus:border-primary pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
+              <input type={showPassword ? "text" : "password"} placeholder="••••••••" className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-muted-foreground pr-9 transition-colors" />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
-          <Button className="w-full gradient-red text-primary-foreground font-semibold h-11">
-            Sign In
-          </Button>
-          <p className="text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
-            <Link to="/register" className="text-primary hover:underline font-medium">Sign Up</Link>
+          <button className="w-full py-2 text-sm font-medium bg-foreground text-background rounded-md hover:bg-foreground/90 transition-colors">
+            Entrar
+          </button>
+          <p className="text-center text-xs text-muted-foreground">
+            Não tem conta?{" "}
+            <Link to="/register" className="text-foreground hover:underline">Criar conta</Link>
           </p>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

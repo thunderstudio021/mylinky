@@ -1,11 +1,10 @@
-import { motion } from "framer-motion";
-import { Heart, MessageCircle, Share2, Lock, Eye, Crown, DollarSign } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Heart, MessageCircle, Share2, Lock, Eye, Crown, DollarSign, BadgeCheck } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 interface PostCardProps {
   id: number;
-  creator: { name: string; username: string; avatar: string };
+  creator: { name: string; username: string; verified?: boolean };
   content: string;
   image?: string;
   likes: number;
@@ -17,10 +16,10 @@ interface PostCardProps {
 }
 
 const typeLabels = {
-  free: { label: "Free", icon: Eye, color: "text-green-400" },
-  subscribers: { label: "Subscribers", icon: Crown, color: "text-gold" },
-  ppv: { label: "Pay Per View", icon: DollarSign, color: "text-primary" },
-  "ppv-subscribers": { label: "PPV + Sub", icon: Lock, color: "text-premium-glow" },
+  free: { label: "Público", icon: Eye },
+  subscribers: { label: "Assinantes", icon: Crown },
+  ppv: { label: "Pago", icon: DollarSign },
+  "ppv-subscribers": { label: "Assinantes + Pago", icon: Lock },
 };
 
 const PostCard = ({ creator, content, image, likes, comments, locked, type, price, timeAgo }: PostCardProps) => {
@@ -28,29 +27,23 @@ const PostCard = ({ creator, content, image, likes, comments, locked, type, pric
   const [likeCount, setLikeCount] = useState(likes);
   const typeInfo = typeLabels[type];
 
-  const handleLike = () => {
-    setLiked(!liked);
-    setLikeCount(liked ? likeCount - 1 : likeCount + 1);
-  };
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-card border border-border/50 rounded-xl overflow-hidden"
-    >
+    <div className="bg-card border border-border rounded-lg overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between p-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full gradient-red flex items-center justify-center text-primary-foreground font-bold text-sm">
+        <Link to={`/creator/${creator.username}`} className="flex items-center gap-3 group">
+          <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold text-sm">
             {creator.name[0]}
           </div>
           <div>
-            <p className="font-semibold text-sm text-foreground">{creator.name}</p>
-            <p className="text-xs text-muted-foreground">@{creator.username} · {timeAgo}</p>
+            <div className="flex items-center gap-1">
+              <span className="text-sm font-medium text-foreground group-hover:underline">{creator.name}</span>
+              {creator.verified && <BadgeCheck className="w-3.5 h-3.5 text-accent" />}
+            </div>
+            <span className="text-xs text-muted-foreground">@{creator.username} · {timeAgo}</span>
           </div>
-        </div>
-        <div className={`flex items-center gap-1 text-xs ${typeInfo.color}`}>
+        </Link>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <typeInfo.icon className="w-3 h-3" />
           <span>{typeInfo.label}</span>
         </div>
@@ -58,25 +51,21 @@ const PostCard = ({ creator, content, image, likes, comments, locked, type, pric
 
       {/* Content */}
       <div className="px-4 pb-3">
-        <p className="text-sm text-foreground/90">{content}</p>
+        <p className="text-sm text-foreground/85 leading-relaxed">{content}</p>
       </div>
 
       {/* Image */}
       {image && (
         <div className="relative">
-          <img
-            src={image}
-            alt="Post content"
-            className={`w-full aspect-video object-cover ${locked ? "blur-xl" : ""}`}
-          />
+          <img src={image} alt="" className={`w-full aspect-[16/10] object-cover ${locked ? "blur-2xl scale-105" : ""}`} />
           {locked && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/40 backdrop-blur-sm">
-              <Lock className="w-10 h-10 text-primary mb-3" />
-              <p className="text-foreground font-semibold text-sm">Exclusive Content</p>
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/50">
+              <Lock className="w-8 h-8 text-muted-foreground mb-2" />
+              <p className="text-sm text-foreground font-medium">Conteúdo exclusivo</p>
               {price && (
-                <Button size="sm" className="mt-3 gradient-red text-primary-foreground font-semibold">
-                  Unlock for R${price.toFixed(2)}
-                </Button>
+                <button className="mt-3 px-5 py-2 text-sm font-medium bg-foreground text-background rounded-md hover:bg-foreground/90 transition-colors">
+                  Desbloquear por R${price.toFixed(2)}
+                </button>
               )}
             </div>
           )}
@@ -84,20 +73,20 @@ const PostCard = ({ creator, content, image, likes, comments, locked, type, pric
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-4 p-4">
-        <button onClick={handleLike} className="flex items-center gap-1.5 group">
-          <Heart className={`w-5 h-5 transition-colors ${liked ? "fill-primary text-primary" : "text-muted-foreground group-hover:text-primary"}`} />
-          <span className="text-sm text-muted-foreground">{likeCount}</span>
+      <div className="flex items-center gap-5 px-4 py-3">
+        <button onClick={() => { setLiked(!liked); setLikeCount(liked ? likeCount - 1 : likeCount + 1); }} className="flex items-center gap-1.5">
+          <Heart className={`w-[18px] h-[18px] transition-colors ${liked ? "fill-accent text-accent" : "text-muted-foreground hover:text-foreground"}`} />
+          <span className="text-xs text-muted-foreground">{likeCount}</span>
         </button>
-        <button className="flex items-center gap-1.5 group">
-          <MessageCircle className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-          <span className="text-sm text-muted-foreground">{comments}</span>
+        <button className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+          <MessageCircle className="w-[18px] h-[18px]" />
+          <span className="text-xs">{comments}</span>
         </button>
-        <button className="flex items-center gap-1.5 group">
-          <Share2 className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+        <button className="text-muted-foreground hover:text-foreground transition-colors">
+          <Share2 className="w-[18px] h-[18px]" />
         </button>
       </div>
-    </motion.div>
+    </div>
   );
 };
 
