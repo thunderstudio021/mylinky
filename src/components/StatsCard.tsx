@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { LucideIcon } from "lucide-react";
 
 interface StatsCardProps {
@@ -9,22 +8,15 @@ interface StatsCardProps {
   index: number;
 }
 
-const StatsCard = ({ title, value, change, icon: Icon, index }: StatsCardProps) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: index * 0.1 }}
-    className="bg-card border border-border/50 rounded-xl p-5"
-  >
-    <div className="flex items-center justify-between mb-3">
-      <span className="text-sm text-muted-foreground">{title}</span>
-      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-        <Icon className="w-4 h-4 text-primary" />
-      </div>
+const StatsCard = ({ title, value, change, icon: Icon }: StatsCardProps) => (
+  <div className="bg-card border border-border rounded-lg p-4">
+    <div className="flex items-center justify-between mb-2">
+      <span className="text-xs text-muted-foreground">{title}</span>
+      <Icon className="w-4 h-4 text-muted-foreground" />
     </div>
-    <p className="text-2xl font-bold text-foreground">{value}</p>
-    {change && <p className="text-xs text-green-400 mt-1">{change}</p>}
-  </motion.div>
+    <p className="text-xl font-semibold text-foreground">{value}</p>
+    {change && <p className="text-xs text-muted-foreground mt-1">{change}</p>}
+  </div>
 );
 
 export default StatsCard;
