@@ -28,12 +28,14 @@ const Index = () => {
       setPosts(postsData || []);
 
       if (user) {
-        const [{ data: subsData }, { data: ppvData }] = await Promise.all([
+        const [{ data: subsData }, { data: ppvData }, { data: followData }] = await Promise.all([
           supabase.from("subscriptions").select("creator_id").eq("subscriber_id", user.id).eq("status", "active"),
           supabase.from("ppv_purchases").select("post_id").eq("buyer_id", user.id),
+          supabase.from("followers").select("creator_id").eq("follower_id", user.id),
         ]);
         setSubscriptions(new Set((subsData || []).map((s: any) => s.creator_id)));
         setPurchases(new Set((ppvData || []).map((p: any) => p.post_id)));
+        setFollowing(new Set((followData || []).map((f: any) => f.creator_id)));
       }
       setLoading(false);
     };
