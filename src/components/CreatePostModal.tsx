@@ -103,16 +103,37 @@ const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
       }
 
       // Insert post
-      const { error } = await supabase.from("posts").insert({
+      const pollContent = contentType === "poll" 
+        ? text.trim() || "Enquete"
+        : text;
+      
+      const { data: postData, error } = await supabase.from("posts").insert({
         creator_id: user!.id,
-        content: text,
+        content: pollContent,
         media_url,
-        media_type: media_type || (contentType === "text" ? "" : ""),
+        media_type: contentType === "poll" ? "poll" : (media_type || ""),
         post_visibility: needsPostType ? postType : "free",
         ppv_price: (postType === "ppv" || postType === "ppv-subscribers") ? parseFloat(ppvPrice) || 0 : 0,
-      });
+      }).select("id").single();
 
       if (error) throw error;
+
+      // Create poll if needed
+      if (contentType === "poll" && postData) {
+        const validOptions = pollOptions.filter(o => o.trim());
+        const { data: pollData, error: pollError } = await supabase
+          .from("polls").insert({ post_id: postData.id }).select("id").single();
+        if (pollError) throw pollError;
+
+        const optionsToInsert = validOptions.map((text, i) => ({
+          poll_id: pollData.id,
+          text: text.trim(),
+          position: i,
+        }));
+        const { error: optError } = await supabase.from("poll_options").insert(optionsToInsert);
+        if (optError) throw optError;
+      }
+
       toast.success("Publicação criada com sucesso!");
       handleClose();
     } catch (err: any) {

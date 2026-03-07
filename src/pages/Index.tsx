@@ -101,6 +101,7 @@ const Index = () => {
                       creatorPriceMonthly={Number(profile?.price_monthly) || 0}
                       creatorPriceYearly={Number(profile?.price_yearly) || 0}
                       currentUserId={user?.id}
+                      mediaType={post.media_type}
                     />
                   );
                 })
