@@ -93,6 +93,7 @@ const DashboardTab = () => {
     totalSubscribers: 0, revenueBruto: 0, revenueLiquido: 0,
     giftsTotal: 0, followersTotal: 0,
   });
+  const [monthlyData, setMonthlyData] = useState<{ month: string; valor: number }[]>([]);
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
