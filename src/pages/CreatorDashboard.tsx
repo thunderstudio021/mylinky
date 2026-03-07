@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { DollarSign, Users, TrendingUp, Wallet, ArrowUpRight, Send, Loader2, Clock, X as XIcon } from "lucide-react";
+import { DollarSign, Users, TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Send, Loader2, Clock, X as XIcon, Gift } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
