@@ -134,12 +134,12 @@ const PostCard = ({
         {(image || video) && (
           <div className="relative cursor-pointer" onClick={() => !showLocked && (isVideo ? setVideoPlaying(true) : setFullscreen(true))}>
             {isVideo ? (
-              <div className="relative" style={{ aspectRatio: "9/16", maxHeight: "500px" }}>
+              <div className="relative w-full" style={{ aspectRatio: "9/16" }}>
                 <video src={video} className={`w-full h-full object-cover ${showLocked ? "blur-2xl scale-105" : ""}`} muted playsInline loop />
                 {!showLocked && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-14 h-14 rounded-full bg-background/60 flex items-center justify-center">
-                      <Play className="w-6 h-6 text-foreground ml-0.5" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-opacity hover:bg-black/20">
+                    <div className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center transition-transform duration-200 hover:scale-110">
+                      <Play className="w-5 h-5 text-white ml-0.5 drop-shadow-sm" />
                     </div>
                   </div>
                 )}
