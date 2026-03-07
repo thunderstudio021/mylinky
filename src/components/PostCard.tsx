@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 
 interface PostCardProps {
-  id: number;
+  id: string | number;
   creator: { name: string; username: string; verified?: boolean };
   content: string;
   image?: string;
@@ -17,8 +17,7 @@ interface PostCardProps {
   timeAgo: string;
 }
 
-const typeLabels = {
-  free: { label: "Público", icon: Eye },
+const typeLabels: Record<string, { label: string; icon: any }> = {
   subscribers: { label: "Assinantes", icon: Crown },
   ppv: { label: "Pago", icon: DollarSign },
   "ppv-subscribers": { label: "Assinantes + Pago", icon: Lock },
@@ -50,10 +49,12 @@ const PostCard = ({ creator, content, image, video, likes, comments, locked, typ
               <span className="text-xs text-muted-foreground">@{creator.username} · {timeAgo}</span>
             </div>
           </Link>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <typeInfo.icon className="w-3 h-3" />
-            <span>{typeInfo.label}</span>
-          </div>
+          {typeInfo && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <typeInfo.icon className="w-3 h-3" />
+              <span>{typeInfo.label}</span>
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -61,7 +62,7 @@ const PostCard = ({ creator, content, image, video, likes, comments, locked, typ
           <p className="text-sm text-foreground/85 leading-relaxed">{content}</p>
         </div>
 
-        {/* Media - Photo 4:5, Video 9:16 */}
+        {/* Media */}
         {(image || video) && (
           <div className="relative cursor-pointer" onClick={() => !locked && (isVideo ? setVideoPlaying(true) : setFullscreen(true))}>
             {isVideo ? (
@@ -95,7 +96,7 @@ const PostCard = ({ creator, content, image, video, likes, comments, locked, typ
                 <p className="text-sm text-foreground font-medium">Conteúdo exclusivo</p>
                 {price && (
                   <button className="mt-3 px-5 py-2 text-sm font-medium bg-foreground text-background rounded-md hover:bg-foreground/90 transition-colors">
-                    Desbloquear por R${price.toFixed(2)}
+                    Desbloquear por R${Number(price).toFixed(2)}
                   </button>
                 )}
               </div>
