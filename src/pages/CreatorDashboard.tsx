@@ -207,6 +207,32 @@ const CreatorDashboard = () => {
           </div>
         </div>
 
+        {/* Transaction history */}
+        {transactions.length > 0 && (
+          <div className="bg-card border border-border rounded-lg p-5 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <ArrowDownRight className="w-4 h-4 text-muted-foreground" />
+              <h3 className="text-sm font-medium text-foreground">Histórico de vendas</h3>
+            </div>
+            <div className="space-y-1">
+              {transactions.map((tx, i) => (
+                <div key={i} className="flex items-center justify-between py-3 border-b border-border last:border-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                      {tx.type === "Presente" ? <Gift className="w-3.5 h-3.5 text-foreground" /> : <DollarSign className="w-3.5 h-3.5 text-foreground" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{tx.type}{tx.detail ? ` · ${tx.detail}` : ""}</p>
+                      <p className="text-[11px] text-muted-foreground">{new Date(tx.date).toLocaleDateString("pt-BR")} · Líquido: R$ {fmt(tx.amount * (1 - commissionRate / 100))}</p>
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium text-foreground">R$ {fmt(tx.amount)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Withdraw button */}
         <button
           onClick={() => setWithdrawOpen(true)}
