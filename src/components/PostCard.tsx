@@ -67,8 +67,7 @@ const PostCard = ({
     if (type === "subscribers" && localSubscribed) return false;
     if (type === "ppv" && localPurchased) return false;
     if (type === "ppv-subscribers" && (localSubscribed || localPurchased)) return false;
-    if (type !== "free") return true;
-    return false;
+    return true;
   })();
 
   const needsSubscription = type === "subscribers" || (type === "ppv-subscribers" && !localPurchased);
