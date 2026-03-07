@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { DollarSign, Users, TrendingUp, Wallet, ArrowUpRight, Send, Loader2, Check, Clock, X as XIcon } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { DollarSign, Users, TrendingUp, Wallet, ArrowUpRight, Send, Loader2, Clock, X as XIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,22 +16,88 @@ const CreatorDashboard = () => {
   const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const availableBalance = 0;
-  const pendingBalance = 0;
+  const [revenueBruto, setRevenueBruto] = useState(0);
+  const [revenueLiquido, setRevenueLiquido] = useState(0);
+  const [commissionRate, setCommissionRate] = useState(20);
+  const [totalWithdrawn, setTotalWithdrawn] = useState(0);
+
+  const loadFinancials = useCallback(async () => {
+    if (!user) return;
+
+    const [subsRes, giftsRes, ppvRes, profileRes, withdrawRes] = await Promise.all([
+      supabase.from("subscriptions").select("amount").eq("creator_id", user.id),
+      supabase.from("gifts").select("amount").eq("creator_id", user.id),
+      // PPV: need to get posts by this creator, then purchases for those posts
+      supabase.from("posts").select("id").eq("creator_id", user.id),
+      supabase.from("profiles").select("commission_rate").eq("id", user.id).single(),
+      supabase.from("withdrawal_requests").select("amount, status").eq("creator_id", user.id).eq("status", "approved"),
+    ]);
+
+    const rate = Number(profileRes.data?.commission_rate ?? 20);
+    setCommissionRate(rate);
+
+    const subTotal = (subsRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
+    const giftTotal = (giftsRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
+
+    // Get PPV purchases for this creator's posts
+    const postIds = (ppvRes.data || []).map(p => p.id);
+    let ppvTotal = 0;
+    if (postIds.length > 0) {
+      const { data: purchases } = await supabase
+        .from("ppv_purchases")
+        .select("amount")
+        .in("post_id", postIds);
+      ppvTotal = (purchases || []).reduce((s, r) => s + Number(r.amount), 0);
+    }
+
+    const bruto = subTotal + giftTotal + ppvTotal;
+    const liquido = bruto * (1 - rate / 100);
+    const withdrawn = (withdrawRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
+
+    setRevenueBruto(bruto);
+    setRevenueLiquido(liquido);
+    setTotalWithdrawn(withdrawn);
+  }, [user]);
+
+  const loadWithdrawals = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("withdrawal_requests")
+      .select("*")
+      .eq("creator_id", user.id)
+      .order("created_at", { ascending: false });
+    setWithdrawals(data || []);
+  }, [user]);
 
   useEffect(() => {
-    const load = async () => {
-      if (!user) return;
-      const { data } = await supabase
-        .from("withdrawal_requests")
-        .select("*")
-        .eq("creator_id", user.id)
-        .order("created_at", { ascending: false });
-      setWithdrawals(data || []);
+    const init = async () => {
+      await Promise.all([loadFinancials(), loadWithdrawals()]);
       setLoading(false);
     };
-    load();
-  }, [user]);
+    init();
+  }, [loadFinancials, loadWithdrawals]);
+
+  // Realtime: listen for new subscriptions, gifts, ppv_purchases
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel("wallet-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "subscriptions", filter: `creator_id=eq.${user.id}` }, () => {
+        loadFinancials();
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "gifts", filter: `creator_id=eq.${user.id}` }, () => {
+        loadFinancials();
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "ppv_purchases" }, () => {
+        loadFinancials();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user, loadFinancials]);
+
+  const availableBalance = revenueLiquido - totalWithdrawn;
 
   const handleWithdraw = async () => {
     const val = parseFloat(amount);
@@ -65,16 +131,12 @@ const CreatorDashboard = () => {
       setHolderName("");
       setBankName("");
       setAmount("");
-      // Reload
-      const { data } = await supabase
-        .from("withdrawal_requests")
-        .select("*")
-        .eq("creator_id", user!.id)
-        .order("created_at", { ascending: false });
-      setWithdrawals(data || []);
+      loadWithdrawals();
     }
     setSubmitting(false);
   };
+
+  const fmt = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const statusLabel = (s: string) => {
     if (s === "pending") return { text: "Pendente", cls: "text-yellow-500 bg-yellow-500/10" };
@@ -97,14 +159,39 @@ const CreatorDashboard = () => {
               <Wallet className="w-4 h-4 text-muted-foreground" />
               <p className="text-xs text-muted-foreground uppercase tracking-wider">Saldo disponível</p>
             </div>
-            <p className="text-2xl font-bold text-foreground">R${availableBalance.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-foreground">R$ {fmt(Math.max(availableBalance, 0))}</p>
           </div>
           <div className="bg-card border border-border rounded-lg p-5">
             <div className="flex items-center gap-2 mb-3">
               <Clock className="w-4 h-4 text-muted-foreground" />
               <p className="text-xs text-muted-foreground uppercase tracking-wider">Saldo pendente</p>
             </div>
-            <p className="text-2xl font-bold text-muted-foreground">R${pendingBalance.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-muted-foreground">R$ {fmt(0)}</p>
+          </div>
+        </div>
+
+        {/* Revenue breakdown */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="flex items-center gap-1.5 mb-1">
+              <DollarSign className="w-3.5 h-3.5 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">Venda bruta</p>
+            </div>
+            <p className="text-lg font-semibold text-foreground">R$ {fmt(revenueBruto)}</p>
+          </div>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="flex items-center gap-1.5 mb-1">
+              <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">Venda líquida ({100 - commissionRate}%)</p>
+            </div>
+            <p className="text-lg font-semibold text-foreground">R$ {fmt(revenueLiquido)}</p>
+          </div>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Users className="w-3.5 h-3.5 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">Assinantes</p>
+            </div>
+            <p className="text-lg font-semibold text-foreground">{profile?.subscribers_count || 0}</p>
           </div>
         </div>
 
@@ -116,31 +203,6 @@ const CreatorDashboard = () => {
           <Send className="w-4 h-4" />
           Solicitar saque via PIX
         </button>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-          <div className="bg-card border border-border rounded-lg p-4">
-            <div className="flex items-center gap-1.5 mb-1">
-              <Users className="w-3.5 h-3.5 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">Assinantes</p>
-            </div>
-            <p className="text-lg font-semibold text-foreground">{profile?.subscribers_count || 0}</p>
-          </div>
-          <div className="bg-card border border-border rounded-lg p-4">
-            <div className="flex items-center gap-1.5 mb-1">
-              <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">Seguidores</p>
-            </div>
-            <p className="text-lg font-semibold text-foreground">{profile?.followers_count || 0}</p>
-          </div>
-          <div className="bg-card border border-border rounded-lg p-4">
-            <div className="flex items-center gap-1.5 mb-1">
-              <DollarSign className="w-3.5 h-3.5 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">Total ganho</p>
-            </div>
-            <p className="text-lg font-semibold text-foreground">R$0,00</p>
-          </div>
-        </div>
 
         {/* Withdrawal history */}
         <div className="bg-card border border-border rounded-lg p-5">
@@ -159,7 +221,7 @@ const CreatorDashboard = () => {
                 return (
                   <div key={w.id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
                     <div>
-                      <p className="text-sm font-medium text-foreground">R${Number(w.amount).toFixed(2)}</p>
+                      <p className="text-sm font-medium text-foreground">R$ {fmt(Number(w.amount))}</p>
                       <p className="text-[11px] text-muted-foreground">
                         PIX: {w.pix_key} · {new Date(w.created_at).toLocaleDateString("pt-BR")}
                       </p>
