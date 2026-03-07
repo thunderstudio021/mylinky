@@ -20,6 +20,7 @@ const CreatorDashboard = () => {
   const [revenueLiquido, setRevenueLiquido] = useState(0);
   const [commissionRate, setCommissionRate] = useState(20);
   const [totalWithdrawn, setTotalWithdrawn] = useState(0);
+  const [transactions, setTransactions] = useState<any[]>([]);
 
   const loadFinancials = useCallback(async () => {
     if (!user) return;
