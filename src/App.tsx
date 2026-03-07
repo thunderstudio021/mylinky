@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Navbar from "./components/Navbar";
 import Index from "./pages/Index";
 import Explore from "./pages/Explore";
+import Search from "./pages/Search";
 import CreatorProfile from "./pages/CreatorProfile";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -32,6 +33,7 @@ const AppRoutes = () => (
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/explore" element={<Explore />} />
+      <Route path="/search" element={<Search />} />
       <Route path="/:username" element={<CreatorProfile />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
