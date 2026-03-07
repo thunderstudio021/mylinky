@@ -298,19 +298,17 @@ const CreatorProfile = () => {
                   {isFollowing ? "Seguindo" : "Seguir"}
                 </button>
 
-                {creator.price_monthly > 0 && (
-                  <button
-                    onClick={() => !isSubscribed && setSubscribeOpen(true)}
-                    className={`flex items-center gap-1.5 px-5 py-2 text-sm font-medium rounded-full transition-all ${
-                      isSubscribed
-                        ? "bg-accent/10 text-accent border border-accent/20"
-                        : "bg-foreground text-background hover:bg-foreground/90"
-                    }`}
-                  >
-                    <Crown className="w-3.5 h-3.5" />
-                    {isSubscribed ? "Assinante" : "Assinar"}
-                  </button>
-                )}
+                <button
+                  onClick={() => !isSubscribed && setSubscribeOpen(true)}
+                  className={`flex items-center gap-1.5 px-5 py-2 text-sm font-medium rounded-full transition-all ${
+                    isSubscribed
+                      ? "bg-accent/10 text-accent border border-accent/20"
+                      : "bg-foreground text-background hover:bg-foreground/90"
+                  }`}
+                >
+                  <Crown className="w-3.5 h-3.5" />
+                  {isSubscribed ? "Assinante" : "Assinar"}
+                </button>
               </div>
             )}
           </div>
@@ -318,37 +316,53 @@ const CreatorProfile = () => {
 
         {/* Posts */}
         <div className="space-y-4">
-          {posts.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-12">
-              {isOwnProfile ? "Você ainda não publicou nada." : "Nenhuma publicação ainda."}
-            </p>
-          ) : (
-            posts.map((post) => (
-              <PostCard
-                key={post.id}
-                id={post.id}
-                creator={{ name: creator.name, username: creator.username, verified: creator.verified }}
-                content={post.content}
-                image={post.media_type === "photo" ? post.media_url : undefined}
-                video={post.media_type === "video" ? post.media_url : undefined}
-                likes={post.likes_count}
-                comments={post.comments_count}
-                locked={post.post_visibility !== "free"}
-                type={post.post_visibility}
-                price={post.ppv_price > 0 ? post.ppv_price : undefined}
-                timeAgo={getTimeAgo(post.created_at)}
-                isAdmin={isAdmin}
-                isOwner={isOwnProfile}
-                isSubscribed={isSubscribed}
-                hasPurchased={purchasedPosts.has(post.id)}
-                creatorId={creator.id}
-                creatorPriceMonthly={creator.price_monthly}
-                creatorPriceYearly={creator.price_yearly}
-                currentUserId={user?.id}
-                mediaType={post.media_type}
-              />
-            ))
-          )}
+          {(() => {
+            const visiblePosts = posts.filter((post) => {
+              // Owner and admin see everything
+              if (isOwnProfile || isAdmin) return true;
+              // Free posts visible to all
+              if (post.post_visibility === "free") return true;
+              // Subscriber-only posts
+              if (post.post_visibility === "subscribers" && isSubscribed) return true;
+              // PPV posts - only if purchased
+              if (post.post_visibility === "ppv" && purchasedPosts.has(post.id)) return true;
+              // PPV+subscribers
+              if (post.post_visibility === "ppv-subscribers" && (isSubscribed || purchasedPosts.has(post.id))) return true;
+              return false;
+            });
+
+            return visiblePosts.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-12">
+                {isOwnProfile ? "Você ainda não publicou nada." : posts.length > 0 ? "Assine para ver as publicações exclusivas." : "Nenhuma publicação ainda."}
+              </p>
+            ) : (
+              visiblePosts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  id={post.id}
+                  creator={{ name: creator.name, username: creator.username, verified: creator.verified }}
+                  content={post.content}
+                  image={post.media_type === "photo" ? post.media_url : undefined}
+                  video={post.media_type === "video" ? post.media_url : undefined}
+                  likes={post.likes_count}
+                  comments={post.comments_count}
+                  locked={false}
+                  type={post.post_visibility}
+                  price={post.ppv_price > 0 ? post.ppv_price : undefined}
+                  timeAgo={getTimeAgo(post.created_at)}
+                  isAdmin={isAdmin}
+                  isOwner={isOwnProfile}
+                  isSubscribed={isSubscribed}
+                  hasPurchased={purchasedPosts.has(post.id)}
+                  creatorId={creator.id}
+                  creatorPriceMonthly={creator.price_monthly}
+                  creatorPriceYearly={creator.price_yearly}
+                  currentUserId={user?.id}
+                  mediaType={post.media_type}
+                />
+              ))
+            );
+          })()}
         </div>
       </div>
 
