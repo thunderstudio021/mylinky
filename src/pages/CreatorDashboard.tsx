@@ -325,8 +325,13 @@ const CreatorDashboard = () => {
                       {tx.type === "Presente" ? <Gift className="w-3.5 h-3.5 text-foreground" /> : <DollarSign className="w-3.5 h-3.5 text-foreground" />}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">{tx.type}{tx.detail ? ` · ${tx.detail}` : ""}</p>
-                      <p className="text-[11px] text-muted-foreground">{new Date(tx.date).toLocaleDateString("pt-BR")} · Líquido: R$ {fmt(tx.amount * (1 - commissionRate / 100))}</p>
+                      <p className="text-sm font-medium text-foreground">
+                        {tx.type}{tx.detail ? ` · ${tx.detail}` : ""}
+                        {tx.method === "credit_card" ? <CreditCard className="w-3 h-3 inline ml-1.5 text-muted-foreground" /> : <QrCode className="w-3 h-3 inline ml-1.5 text-muted-foreground" />}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {new Date(tx.date).toLocaleDateString("pt-BR")} · {tx.method === "credit_card" ? "Cartão" : "PIX"} · Líquido: R$ {fmt(tx.amount * (1 - commissionRate / 100))}
+                      </p>
                     </div>
                   </div>
                   <p className="text-sm font-medium text-foreground">R$ {fmt(tx.amount)}</p>
