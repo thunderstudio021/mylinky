@@ -21,7 +21,8 @@ const postTypeOptions: { value: PostType; label: string; icon: any; description:
 ];
 
 const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const [publishing, setPublishing] = useState(false);
   const [step, setStep] = useState<"type" | "form">("type");
   const [contentType, setContentType] = useState<ContentType | null>(null);
   const [postType, setPostType] = useState<PostType>("free");
@@ -83,8 +84,42 @@ const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
       return;
     }
 
-    toast.success("Publicação criada com sucesso!");
-    handleClose();
+    setPublishing(true);
+    try {
+      let media_url = "";
+      let media_type = "";
+
+      // Upload media if present
+      if (mediaFile && user) {
+        const ext = mediaFile.name.split(".").pop();
+        const path = `${user.id}/${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("media")
+          .upload(path, mediaFile);
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+        media_url = urlData.publicUrl;
+        media_type = contentType === "photo" ? "photo" : "video";
+      }
+
+      // Insert post
+      const { error } = await supabase.from("posts").insert({
+        creator_id: user!.id,
+        content: text,
+        media_url,
+        media_type: media_type || (contentType === "text" ? "" : ""),
+        post_visibility: needsPostType ? postType : "free",
+        ppv_price: (postType === "ppv" || postType === "ppv-subscribers") ? parseFloat(ppvPrice) || 0 : 0,
+      });
+
+      if (error) throw error;
+      toast.success("Publicação criada com sucesso!");
+      handleClose();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao publicar");
+    } finally {
+      setPublishing(false);
+    }
   };
 
   const addPollOption = () => {
