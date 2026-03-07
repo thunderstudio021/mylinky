@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -156,6 +157,27 @@ const DashboardTab = () => {
         giftsTotal: gifts.length,
         followersTotal: followersRes.count || 0,
       });
+
+      // Build monthly revenue data (last 6 months)
+      const allTransactions = [
+        ...allSubs.map(s => ({ amount: Number(s.amount), created_at: (s as any).created_at })),
+        ...gifts.map(g => ({ amount: Number(g.amount), created_at: (g as any).created_at })),
+        ...ppvs.map(p => ({ amount: Number(p.amount), created_at: (p as any).created_at })),
+      ];
+      const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+      const now = new Date();
+      const months: { month: string; valor: number }[] = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        const label = `${monthNames[d.getMonth()]}`;
+        const total = allTransactions
+          .filter(t => t.created_at && t.created_at.startsWith(key))
+          .reduce((s, t) => s + t.amount, 0);
+        months.push({ month: label, valor: total });
+      }
+      setMonthlyData(months);
+
       setRecentUsers(recentRes.data || []);
       setLoading(false);
     };
