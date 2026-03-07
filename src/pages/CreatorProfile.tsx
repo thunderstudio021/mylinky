@@ -204,6 +204,7 @@ const CreatorProfile = () => {
                 creatorPriceMonthly={creator.price_monthly}
                 creatorPriceYearly={creator.price_yearly}
                 currentUserId={user?.id}
+                mediaType={post.media_type}
               />
             ))
           )}
