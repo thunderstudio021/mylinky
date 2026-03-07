@@ -25,7 +25,6 @@ const Navbar = () => {
   const isAuthPage = location.pathname === "/login" || location.pathname === "/register";
   if (isAuthPage) return null;
 
-  const notificationCount = useUnreadNotifications();
 
   const canCreate = isCreator || isAdmin;
   const bottomItems = [
