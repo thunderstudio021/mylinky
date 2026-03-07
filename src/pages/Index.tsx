@@ -13,6 +13,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [subscriptions, setSubscriptions] = useState<Set<string>>(new Set());
   const [purchases, setPurchases] = useState<Set<string>>(new Set());
+  const [following, setFollowing] = useState<Set<string>>(new Set());
   const { user, isAdmin } = useAuth();
 
   useEffect(() => {
