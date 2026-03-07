@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { DollarSign, Users, TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Send, Loader2, Clock, X as XIcon, Gift, Calendar } from "lucide-react";
+import { DollarSign, Users, TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Send, Loader2, Clock, X as XIcon, Gift, Calendar, QrCode, CreditCard } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -45,12 +45,19 @@ const CreatorDashboard = () => {
   const [totalPending, setTotalPending] = useState(0);
   const [transactions, setTransactions] = useState<any[]>([]);
 
+  const [pixBruto, setPixBruto] = useState(0);
+  const [cardBruto, setCardBruto] = useState(0);
+  const [cardAvailable, setCardAvailable] = useState(0);
+  const [cardLocked, setCardLocked] = useState(0);
+
+  const D14_MS = 14 * 24 * 60 * 60 * 1000;
+
   const loadFinancials = useCallback(async () => {
     if (!user) return;
 
     const [subsRes, giftsRes, ppvPostsRes, profileRes, withdrawApprovedRes, withdrawPendingRes] = await Promise.all([
-      supabase.from("subscriptions").select("amount, created_at, plan, subscriber_id").eq("creator_id", user.id),
-      supabase.from("gifts").select("amount, created_at, sender_id").eq("creator_id", user.id),
+      supabase.from("subscriptions").select("amount, created_at, plan, subscriber_id, payment_method").eq("creator_id", user.id),
+      supabase.from("gifts").select("amount, created_at, sender_id, payment_method").eq("creator_id", user.id),
       supabase.from("posts").select("id").eq("creator_id", user.id),
       supabase.from("profiles").select("commission_rate").eq("id", user.id).single(),
       supabase.from("withdrawal_requests").select("amount, status").eq("creator_id", user.id).eq("status", "approved"),
@@ -63,23 +70,36 @@ const CreatorDashboard = () => {
     const subs = subsRes.data || [];
     const gifts = giftsRes.data || [];
 
-    const subTotal = subs.reduce((s, r) => s + Number(r.amount), 0);
-    const giftTotal = gifts.reduce((s, r) => s + Number(r.amount), 0);
-
     // PPV purchases for this creator's posts
     const postIds = (ppvPostsRes.data || []).map(p => p.id);
     let ppvPurchases: any[] = [];
     if (postIds.length > 0) {
       const { data } = await supabase
         .from("ppv_purchases")
-        .select("amount, created_at, buyer_id")
+        .select("amount, created_at, buyer_id, payment_method")
         .in("post_id", postIds);
       ppvPurchases = data || [];
     }
-    const ppvTotal = ppvPurchases.reduce((s, r) => s + Number(r.amount), 0);
 
-    const bruto = subTotal + giftTotal + ppvTotal;
+    // Build all transactions with payment_method
+    const allTx = [
+      ...subs.map(s => ({ type: "Assinatura" as const, amount: Number(s.amount), date: s.created_at, detail: s.plan === "yearly" ? "Plano anual" : "Plano mensal", method: (s as any).payment_method || "pix" })),
+      ...gifts.map(g => ({ type: "Presente" as const, amount: Number(g.amount), date: g.created_at, detail: "", method: (g as any).payment_method || "pix" })),
+      ...ppvPurchases.map(p => ({ type: "PPV" as const, amount: Number(p.amount), date: p.created_at, detail: "", method: (p as any).payment_method || "pix" })),
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const bruto = allTx.reduce((s, tx) => s + tx.amount, 0);
     const liquido = bruto * (1 - rate / 100);
+
+    // PIX vs Card breakdown (bruto)
+    const pixB = allTx.filter(tx => tx.method === "pix").reduce((s, tx) => s + tx.amount, 0);
+    const cardB = allTx.filter(tx => tx.method === "credit_card").reduce((s, tx) => s + tx.amount, 0);
+
+    // Card D+14: only card transactions older than 14 days are available
+    const now = Date.now();
+    const cardAvail = allTx.filter(tx => tx.method === "credit_card" && (now - new Date(tx.date).getTime()) >= D14_MS).reduce((s, tx) => s + tx.amount, 0);
+    const cardLock = cardB - cardAvail;
+
     const withdrawn = (withdrawApprovedRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
     const pending = (withdrawPendingRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
 
@@ -87,13 +107,10 @@ const CreatorDashboard = () => {
     setRevenueLiquido(liquido);
     setTotalWithdrawn(withdrawn);
     setTotalPending(pending);
-
-    // Build transaction history
-    const allTx = [
-      ...subs.map(s => ({ type: "Assinatura" as const, amount: Number(s.amount), date: s.created_at, detail: s.plan === "yearly" ? "Plano anual" : "Plano mensal" })),
-      ...gifts.map(g => ({ type: "Presente" as const, amount: Number(g.amount), date: g.created_at, detail: "" })),
-      ...ppvPurchases.map(p => ({ type: "PPV" as const, amount: Number(p.amount), date: p.created_at, detail: "" })),
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setPixBruto(pixB);
+    setCardBruto(cardB);
+    setCardAvailable(cardAvail);
+    setCardLocked(cardLock);
     setTransactions(allTx);
   }, [user]);
 
@@ -126,7 +143,11 @@ const CreatorDashboard = () => {
     return () => { supabase.removeChannel(channel); };
   }, [user, loadFinancials]);
 
-  const availableBalance = revenueLiquido - totalWithdrawn - totalPending;
+  // Available = PIX líquido (instant) + Card líquido available (D+14 passed) - withdrawn - pending
+  const pixLiquido = pixBruto * (1 - commissionRate / 100);
+  const cardLiquidoAvailable = cardAvailable * (1 - commissionRate / 100);
+  const cardLiquidoLocked = cardLocked * (1 - commissionRate / 100);
+  const availableBalance = pixLiquido + cardLiquidoAvailable - totalWithdrawn - totalPending;
 
   // Filtered transactions by period
   const filteredTransactions = useMemo(() => {
@@ -137,6 +158,8 @@ const CreatorDashboard = () => {
 
   const filteredBruto = useMemo(() => filteredTransactions.reduce((s, tx) => s + tx.amount, 0), [filteredTransactions]);
   const filteredLiquido = useMemo(() => filteredBruto * (1 - commissionRate / 100), [filteredBruto, commissionRate]);
+  const filteredPixBruto = useMemo(() => filteredTransactions.filter(tx => tx.method === "pix").reduce((s, tx) => s + tx.amount, 0), [filteredTransactions]);
+  const filteredCardBruto = useMemo(() => filteredTransactions.filter(tx => tx.method === "credit_card").reduce((s, tx) => s + tx.amount, 0), [filteredTransactions]);
 
   const handleWithdraw = async () => {
     const val = parseFloat(amount);
@@ -261,7 +284,32 @@ const CreatorDashboard = () => {
           </div>
         </div>
 
-        {/* Transaction history (filtered) */}
+        {/* PIX vs Card breakdown */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="flex items-center gap-1.5 mb-2">
+              <QrCode className="w-3.5 h-3.5 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">Vendas via PIX</p>
+            </div>
+            <p className="text-base font-semibold text-foreground">R$ {fmt(period === "all" ? pixBruto : filteredPixBruto)}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Líquido: R$ {fmt((period === "all" ? pixBruto : filteredPixBruto) * (1 - commissionRate / 100))}</p>
+            <span className="inline-block mt-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full bg-green-500/10 text-green-500">Disponível imediatamente</span>
+          </div>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="flex items-center gap-1.5 mb-2">
+              <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">Vendas via Cartão</p>
+            </div>
+            <p className="text-base font-semibold text-foreground">R$ {fmt(period === "all" ? cardBruto : filteredCardBruto)}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Líquido: R$ {fmt((period === "all" ? cardBruto : filteredCardBruto) * (1 - commissionRate / 100))}</p>
+            <span className="inline-block mt-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-500">Disponível em D+14</span>
+            {cardLocked > 0 && period === "all" && (
+              <p className="text-[11px] text-muted-foreground mt-1">🔒 R$ {fmt(cardLiquidoLocked)} aguardando liberação</p>
+            )}
+          </div>
+        </div>
+
+
         {filteredTransactions.length > 0 && (
           <div className="bg-card border border-border rounded-lg p-5 mb-6">
             <div className="flex items-center gap-2 mb-4">
@@ -277,8 +325,13 @@ const CreatorDashboard = () => {
                       {tx.type === "Presente" ? <Gift className="w-3.5 h-3.5 text-foreground" /> : <DollarSign className="w-3.5 h-3.5 text-foreground" />}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">{tx.type}{tx.detail ? ` · ${tx.detail}` : ""}</p>
-                      <p className="text-[11px] text-muted-foreground">{new Date(tx.date).toLocaleDateString("pt-BR")} · Líquido: R$ {fmt(tx.amount * (1 - commissionRate / 100))}</p>
+                      <p className="text-sm font-medium text-foreground">
+                        {tx.type}{tx.detail ? ` · ${tx.detail}` : ""}
+                        {tx.method === "credit_card" ? <CreditCard className="w-3 h-3 inline ml-1.5 text-muted-foreground" /> : <QrCode className="w-3 h-3 inline ml-1.5 text-muted-foreground" />}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {new Date(tx.date).toLocaleDateString("pt-BR")} · {tx.method === "credit_card" ? "Cartão" : "PIX"} · Líquido: R$ {fmt(tx.amount * (1 - commissionRate / 100))}
+                      </p>
                     </div>
                   </div>
                   <p className="text-sm font-medium text-foreground">R$ {fmt(tx.amount)}</p>
