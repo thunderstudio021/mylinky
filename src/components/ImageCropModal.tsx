@@ -95,22 +95,25 @@ const ImageCropModal = ({ open, imageUrl, aspectRatio, shape = "rect", onConfirm
     const cw = container.clientWidth;
     const ch = container.clientHeight;
 
-    // Image display size
+    // Image display size (must cover crop area)
     const imgAspect = img.naturalWidth / img.naturalHeight;
+    const cropAspect = crop.w / crop.h;
     let dispW: number, dispH: number;
-    if (imgAspect > cw / ch) {
-      dispH = ch;
+    if (imgAspect > cropAspect) {
+      dispH = crop.h;
       dispW = dispH * imgAspect;
     } else {
-      dispW = cw;
+      dispW = crop.w;
       dispH = dispW / imgAspect;
     }
     dispW *= scale;
     dispH *= scale;
 
-    // Image position on container
-    const imgX = (cw - dispW) / 2 + offset.x;
-    const imgY = (ch - dispH) / 2 + offset.y;
+    // Image position relative to container (centered on crop area)
+    const cropCenterX = crop.x + crop.w / 2;
+    const cropCenterY = crop.y + crop.h / 2;
+    const imgX = cropCenterX - dispW / 2 + offset.x;
+    const imgY = cropCenterY - dispH / 2 + offset.y;
 
     // Map crop area to image natural coordinates
     const scaleX = img.naturalWidth / dispW;
@@ -149,25 +152,30 @@ const ImageCropModal = ({ open, imageUrl, aspectRatio, shape = "rect", onConfirm
     const img = imgRef.current;
     const container = containerRef.current;
     if (!img || !container) return {};
-    const cw = container.clientWidth;
-    const ch = container.clientHeight;
+
+    const crop = getCropArea();
     const imgAspect = img.naturalWidth / img.naturalHeight;
+    const cropAspect = crop.w / crop.h;
 
     let dispW: number, dispH: number;
-    if (imgAspect > cw / ch) {
-      dispH = ch;
+    if (imgAspect > cropAspect) {
+      dispH = crop.h;
       dispW = dispH * imgAspect;
     } else {
-      dispW = cw;
+      dispW = crop.w;
       dispH = dispW / imgAspect;
     }
+
+    const cropCenterX = crop.x + crop.w / 2;
+    const cropCenterY = crop.y + crop.h / 2;
 
     return {
       width: dispW * scale,
       height: dispH * scale,
-      left: `calc(50% + ${offset.x}px)`,
-      top: `calc(50% + ${offset.y}px)`,
+      left: cropCenterX + offset.x,
+      top: cropCenterY + offset.y,
       transform: "translate(-50%, -50%)",
+      position: "absolute",
     };
   };
 
