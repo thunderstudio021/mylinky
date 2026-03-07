@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import PostCard from "@/components/PostCard";
 import SubscribeModal from "@/components/SubscribeModal";
+import ImageCropModal from "@/components/ImageCropModal";
 import { toast } from "sonner";
 import type { Profile } from "@/contexts/AuthContext";
 
@@ -26,6 +27,11 @@ const CreatorProfile = () => {
   const [nameValue, setNameValue] = useState("");
   const [bioValue, setBioValue] = useState("");
   const [uploading, setUploading] = useState(false);
+
+  // Crop modal state
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropImageUrl, setCropImageUrl] = useState("");
+  const [cropType, setCropType] = useState<"avatar" | "cover">("avatar");
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -88,41 +94,38 @@ const CreatorProfile = () => {
     toast.success("Assinatura ativada!");
   };
 
-  const uploadImage = async (file: File, path: string) => {
-    const ext = file.name.split(".").pop();
-    const filePath = `${path}/${user!.id}_${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("media").upload(filePath, file, { upsert: true });
+  const uploadBlob = async (blob: Blob, folder: string) => {
+    const filePath = `${folder}/${user!.id}_${Date.now()}.jpg`;
+    const { error } = await supabase.storage.from("media").upload(filePath, blob, { upsert: true, contentType: "image/jpeg" });
     if (error) throw error;
     const { data } = supabase.storage.from("media").getPublicUrl(filePath);
     return data.publicUrl;
   };
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "avatar" | "cover") => {
     const file = e.target.files?.[0];
-    if (!file || !creator) return;
-    setUploading(true);
-    try {
-      const url = await uploadImage(file, "avatars");
-      await supabase.from("profiles").update({ avatar_url: url }).eq("id", creator.id);
-      setCreator({ ...creator, avatar_url: url });
-      toast.success("Foto de perfil atualizada!");
-    } catch {
-      toast.error("Erro ao enviar foto");
-    }
-    setUploading(false);
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setCropType(type);
+    setCropImageUrl(url);
+    setCropOpen(true);
+    // Reset input so same file can be re-selected
+    e.target.value = "";
   };
 
-  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !creator) return;
+  const handleCropConfirm = async (blob: Blob) => {
+    if (!creator) return;
+    setCropOpen(false);
     setUploading(true);
     try {
-      const url = await uploadImage(file, "covers");
-      await supabase.from("profiles").update({ cover_url: url }).eq("id", creator.id);
-      setCreator({ ...creator, cover_url: url });
-      toast.success("Foto de capa atualizada!");
+      const folder = cropType === "avatar" ? "avatars" : "covers";
+      const field = cropType === "avatar" ? "avatar_url" : "cover_url";
+      const url = await uploadBlob(blob, folder);
+      await supabase.from("profiles").update({ [field]: url }).eq("id", creator.id);
+      setCreator({ ...creator, [field]: url });
+      toast.success(cropType === "avatar" ? "Foto de perfil atualizada!" : "Foto de capa atualizada!");
     } catch {
-      toast.error("Erro ao enviar capa");
+      toast.error("Erro ao enviar foto");
     }
     setUploading(false);
   };
@@ -160,8 +163,8 @@ const CreatorProfile = () => {
   return (
     <div className="min-h-screen bg-background pt-12 md:pt-14 pb-20 md:pb-8">
       {/* Hidden file inputs */}
-      <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-      <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+      <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFileSelect(e, "avatar")} />
+      <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFileSelect(e, "cover")} />
 
       {/* Cover */}
       <div className="relative h-40 md:h-56 bg-secondary group">
@@ -361,6 +364,15 @@ const CreatorProfile = () => {
         priceMonthly={creator.price_monthly}
         priceYearly={creator.price_yearly}
         onConfirm={handleSubscribeConfirm}
+      />
+
+      <ImageCropModal
+        open={cropOpen}
+        imageUrl={cropImageUrl}
+        aspectRatio={cropType === "avatar" ? 1 : 16 / 5}
+        shape={cropType === "avatar" ? "circle" : "rect"}
+        onConfirm={handleCropConfirm}
+        onClose={() => setCropOpen(false)}
       />
     </div>
   );
