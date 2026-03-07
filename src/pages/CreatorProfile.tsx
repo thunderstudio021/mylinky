@@ -357,6 +357,7 @@ const CreatorProfile = () => {
                 creatorPriceYearly={creator.price_yearly}
                 currentUserId={user?.id}
                 mediaType={post.media_type}
+                commentsEnabled={(post as any).comments_enabled !== false}
                 onDelete={(postId) => setPosts(posts.filter(p => p.id !== postId))}
                 onUnlocked={() => {
                   // Reload subscription state
