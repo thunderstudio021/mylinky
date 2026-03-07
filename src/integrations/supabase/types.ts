@@ -50,6 +50,65 @@ export type Database = {
         }
         Relationships: []
       }
+      followers: {
+        Row: {
+          created_at: string
+          creator_id: string
+          follower_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          creator_id: string
+          follower_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string
+          follower_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      gifts: {
+        Row: {
+          amount: number
+          created_at: string
+          creator_id: string
+          id: string
+          payment_method: string
+          post_id: string | null
+          sender_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          creator_id: string
+          id?: string
+          payment_method?: string
+          post_id?: string | null
+          sender_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          creator_id?: string
+          id?: string
+          payment_method?: string
+          post_id?: string | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gifts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posts: {
         Row: {
           comments_count: number | null
@@ -93,6 +152,41 @@ export type Database = {
             columns: ["creator_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ppv_purchases: {
+        Row: {
+          amount: number
+          buyer_id: string
+          created_at: string
+          id: string
+          payment_method: string
+          post_id: string
+        }
+        Insert: {
+          amount: number
+          buyer_id: string
+          created_at?: string
+          id?: string
+          payment_method?: string
+          post_id: string
+        }
+        Update: {
+          amount?: number
+          buyer_id?: string
+          created_at?: string
+          id?: string
+          payment_method?: string
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ppv_purchases_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
             referencedColumns: ["id"]
           },
         ]
@@ -148,6 +242,42 @@ export type Database = {
           updated_at?: string
           username?: string
           verified?: boolean | null
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          amount: number
+          created_at: string
+          creator_id: string
+          expires_at: string | null
+          id: string
+          payment_method: string
+          plan: string
+          status: string
+          subscriber_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          creator_id: string
+          expires_at?: string | null
+          id?: string
+          payment_method?: string
+          plan?: string
+          status?: string
+          subscriber_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          creator_id?: string
+          expires_at?: string | null
+          id?: string
+          payment_method?: string
+          plan?: string
+          status?: string
+          subscriber_id?: string
         }
         Relationships: []
       }
