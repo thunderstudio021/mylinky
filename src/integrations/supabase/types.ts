@@ -405,6 +405,7 @@ export type Database = {
           updated_at: string
           username: string
           verified: boolean | null
+          welcome_message: string | null
           whatsapp: string | null
         }
         Insert: {
@@ -425,6 +426,7 @@ export type Database = {
           updated_at?: string
           username: string
           verified?: boolean | null
+          welcome_message?: string | null
           whatsapp?: string | null
         }
         Update: {
@@ -445,6 +447,7 @@ export type Database = {
           updated_at?: string
           username?: string
           verified?: boolean | null
+          welcome_message?: string | null
           whatsapp?: string | null
         }
         Relationships: []
