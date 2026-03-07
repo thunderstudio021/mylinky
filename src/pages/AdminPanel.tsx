@@ -106,9 +106,9 @@ const DashboardTab = () => {
         supabase.from("posts").select("id, media_type"),
         supabase.from("creator_applications").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("withdrawal_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("subscriptions").select("amount, creator_id, status"),
-        supabase.from("gifts").select("amount, creator_id"),
-        supabase.from("ppv_purchases").select("amount, post_id"),
+        supabase.from("subscriptions").select("amount, creator_id, status, created_at"),
+        supabase.from("gifts").select("amount, creator_id, created_at"),
+        supabase.from("ppv_purchases").select("amount, post_id, created_at"),
         supabase.from("profiles").select("id, name, username, avatar_url, created_at, verified").order("created_at", { ascending: false }).limit(5),
         supabase.from("followers").select("id", { count: "exact", head: true }),
       ]);
