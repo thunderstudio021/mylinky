@@ -14,7 +14,7 @@ interface CreatorCardProps {
 
 const CreatorCard = ({ name, username, category, followers, price, verified, index }: CreatorCardProps) => {
   return (
-    <Link to={`/@${username}`} className="block group">
+    <Link to={`/${username}`} className="block group">
       <div className="bg-card border border-border rounded-lg p-4 hover:border-muted-foreground/30 transition-colors">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold text-base shrink-0">
