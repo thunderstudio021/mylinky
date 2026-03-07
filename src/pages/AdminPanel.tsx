@@ -89,40 +89,71 @@ const AdminSidebar = ({
 const DashboardTab = () => {
   const [stats, setStats] = useState({
     users: 0, creators: 0, posts: 0, photos: 0, videos: 0,
-    pendingApps: 0, pendingWithdrawals: 0, totalRevenue: 0,
-    subsActive: 0, giftsTotal: 0,
+    pendingApps: 0, pendingWithdrawals: 0,
+    totalSubscribers: 0, revenueBruto: 0, revenueLiquido: 0,
+    giftsTotal: 0, followersTotal: 0,
   });
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
-      const [profilesRes, creatorsRes, postsRes, pendingAppsRes, pendingWithdrawalsRes, subsRes, giftsRes, recentRes] = await Promise.all([
+      const [profilesRes, creatorsRes, postsRes, pendingAppsRes, pendingWithdrawalsRes, subsRes, giftsRes, ppvRes, recentRes, followersRes] = await Promise.all([
         supabase.from("profiles").select("id", { count: "exact", head: true }),
-        supabase.from("profiles").select("id", { count: "exact", head: true }).eq("verified", true),
+        supabase.from("profiles").select("id, commission_rate", { count: "exact" }).eq("verified", true),
         supabase.from("posts").select("id, media_type"),
         supabase.from("creator_applications").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("withdrawal_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("subscriptions").select("amount").eq("status", "active"),
-        supabase.from("gifts").select("amount"),
+        supabase.from("subscriptions").select("amount, creator_id, status"),
+        supabase.from("gifts").select("amount, creator_id"),
+        supabase.from("ppv_purchases").select("amount, post_id"),
         supabase.from("profiles").select("id, name, username, avatar_url, created_at, verified").order("created_at", { ascending: false }).limit(5),
+        supabase.from("followers").select("id", { count: "exact", head: true }),
       ]);
+
       const posts = postsRes.data || [];
-      const subs = subsRes.data || [];
+      const allSubs = subsRes.data || [];
+      const activeSubs = allSubs.filter(s => s.status === "active");
       const gifts = giftsRes.data || [];
-      const totalRevenue = subs.reduce((s, r) => s + Number(r.amount), 0) + gifts.reduce((s, r) => s + Number(r.amount), 0);
+      const ppvs = ppvRes.data || [];
+      const creators = creatorsRes.data || [];
+
+      // Build commission map: creator_id -> rate (default 20)
+      const commissionMap = new Map<string, number>();
+      creators.forEach((c: any) => commissionMap.set(c.id, Number(c.commission_rate ?? 20)));
+
+      // Calculate bruto (all revenue)
+      const subRevenue = allSubs.reduce((s, r) => s + Number(r.amount), 0);
+      const giftRevenue = gifts.reduce((s, r) => s + Number(r.amount), 0);
+      const ppvRevenue = ppvs.reduce((s, r) => s + Number(r.amount), 0);
+      const revenueBruto = subRevenue + giftRevenue + ppvRevenue;
+
+      // Calculate platform net: sum of (amount * commission_rate/100) per transaction
+      const calcPlatformCut = (items: any[], creatorKey: string) =>
+        items.reduce((sum, item) => {
+          const rate = commissionMap.get(item[creatorKey]) ?? 20;
+          return sum + Number(item.amount) * (rate / 100);
+        }, 0);
+
+      const revenueLiquido =
+        calcPlatformCut(allSubs, "creator_id") +
+        calcPlatformCut(gifts, "creator_id");
+      // PPV doesn't have creator_id directly, so use flat 20% for now
+      const ppvPlatformCut = ppvRevenue * 0.20;
 
       setStats({
         users: profilesRes.count || 0,
         creators: creatorsRes.count || 0,
         posts: posts.length,
-        photos: posts.filter(p => p.media_type === "image").length,
+        photos: posts.filter(p => p.media_type === "image" || p.media_type === "photo").length,
         videos: posts.filter(p => p.media_type === "video").length,
         pendingApps: pendingAppsRes.count || 0,
         pendingWithdrawals: pendingWithdrawalsRes.count || 0,
-        totalRevenue,
-        subsActive: subs.length,
+        totalSubscribers: activeSubs.length,
+        revenueBruto,
+        revenueLiquido: revenueLiquido + ppvPlatformCut,
         giftsTotal: gifts.length,
+        followersTotal: followersRes.count || 0,
       });
       setRecentUsers(recentRes.data || []);
       setLoading(false);
@@ -132,6 +163,8 @@ const DashboardTab = () => {
 
   if (loading) return <LoadingState />;
 
+  const fmt = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   return (
     <div className="space-y-6">
       <div>
@@ -139,21 +172,38 @@ const DashboardTab = () => {
         <p className="text-xs text-muted-foreground mt-0.5">Visão geral da plataforma</p>
       </div>
 
+      {/* Financial highlight */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="bg-card border border-border rounded-xl p-5">
+          <span className="text-xs text-muted-foreground">Faturamento bruto</span>
+          <p className="text-2xl font-bold text-foreground mt-1">R$ {fmt(stats.revenueBruto)}</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Total de assinaturas + presentes + PPV</p>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-5">
+          <span className="text-xs text-muted-foreground">Receita da plataforma</span>
+          <p className="text-2xl font-bold text-foreground mt-1">R$ {fmt(stats.revenueLiquido)}</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Comissão individual por criador (~20%)</p>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-5">
+          <span className="text-xs text-muted-foreground">Assinantes ativos</span>
+          <p className="text-2xl font-bold text-foreground mt-1">{stats.totalSubscribers}</p>
+          <p className="text-[10px] text-muted-foreground mt-1">Assinaturas com status ativo</p>
+        </div>
+      </div>
+
       {/* Primary metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <MetricCard label="Usuários" value={stats.users} icon={Users} />
         <MetricCard label="Criadores" value={stats.creators} icon={UserCheck} />
-        <MetricCard label="Assinaturas ativas" value={stats.subsActive} icon={TrendingUp} />
-        <MetricCard label="Receita total" value={`R$ ${stats.totalRevenue.toFixed(2)}`} icon={Wallet} />
+        <MetricCard label="Seguidores" value={stats.followersTotal} icon={Heart} />
+        <MetricCard label="Presentes" value={stats.giftsTotal} icon={Gift} />
       </div>
 
       {/* Secondary metrics */}
-      <div className="grid grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <MetricCardSmall label="Publicações" value={stats.posts} />
         <MetricCardSmall label="Fotos" value={stats.photos} />
         <MetricCardSmall label="Vídeos" value={stats.videos} />
-        <MetricCardSmall label="Presentes" value={stats.giftsTotal} />
-        <MetricCardSmall label="Seguidores" value="-" />
       </div>
 
       {/* Alerts */}
