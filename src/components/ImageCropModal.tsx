@@ -152,25 +152,30 @@ const ImageCropModal = ({ open, imageUrl, aspectRatio, shape = "rect", onConfirm
     const img = imgRef.current;
     const container = containerRef.current;
     if (!img || !container) return {};
-    const cw = container.clientWidth;
-    const ch = container.clientHeight;
+
+    const crop = getCropArea();
     const imgAspect = img.naturalWidth / img.naturalHeight;
+    const cropAspect = crop.w / crop.h;
 
     let dispW: number, dispH: number;
-    if (imgAspect > cw / ch) {
-      dispH = ch;
+    if (imgAspect > cropAspect) {
+      dispH = crop.h;
       dispW = dispH * imgAspect;
     } else {
-      dispW = cw;
+      dispW = crop.w;
       dispH = dispW / imgAspect;
     }
+
+    const cropCenterX = crop.x + crop.w / 2;
+    const cropCenterY = crop.y + crop.h / 2;
 
     return {
       width: dispW * scale,
       height: dispH * scale,
-      left: `calc(50% + ${offset.x}px)`,
-      top: `calc(50% + ${offset.y}px)`,
+      left: cropCenterX + offset.x,
+      top: cropCenterY + offset.y,
       transform: "translate(-50%, -50%)",
+      position: "absolute",
     };
   };
 
