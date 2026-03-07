@@ -344,10 +344,11 @@ const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
                 <div className="p-4 border-t border-border">
                   <button
                     onClick={handlePublish}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium bg-foreground text-background rounded-md hover:bg-foreground/90 transition-colors"
+                    disabled={publishing}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium bg-foreground text-background rounded-md hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Send className="w-4 h-4" />
-                    Publicar
+                    {publishing ? "Publicando..." : "Publicar"}
                   </button>
                 </div>
               </div>

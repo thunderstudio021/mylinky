@@ -1,0 +1,2 @@
+ALTER TABLE public.posts DROP CONSTRAINT posts_media_type_check;
+ALTER TABLE public.posts ADD CONSTRAINT posts_media_type_check CHECK (media_type = ANY (ARRAY[''::text, 'photo'::text, 'video'::text, 'poll'::text]));
