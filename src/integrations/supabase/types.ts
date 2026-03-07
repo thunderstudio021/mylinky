@@ -332,6 +332,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           category: string | null
+          commission_rate: number | null
           cover_url: string | null
           created_at: string
           email: string
@@ -350,6 +351,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           category?: string | null
+          commission_rate?: number | null
           cover_url?: string | null
           created_at?: string
           email: string
@@ -368,6 +370,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           category?: string | null
+          commission_rate?: number | null
           cover_url?: string | null
           created_at?: string
           email?: string
