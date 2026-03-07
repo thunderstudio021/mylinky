@@ -149,6 +149,9 @@ const Navbar = () => {
       {/* Create Post Modal */}
       <CreatePostModal open={createOpen} onClose={() => setCreateOpen(false)} />
 
+      {/* Notification Panel */}
+      <NotificationPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
+
       {/* Fullscreen Menu Overlay */}
       <AnimatePresence>
         {menuOpen && (
