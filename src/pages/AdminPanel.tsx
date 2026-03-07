@@ -9,7 +9,7 @@ import {
   Menu, X, LayoutDashboard, Users, FileText, Wallet,
   ChevronRight, Search, CheckCircle, XCircle, Eye, Pencil,
   Trash2, Ban, Shield, TrendingUp, Image, Video, UserCheck,
-  ArrowLeft, Save, Percent, LogOut,
+  ArrowLeft, Save, Percent, LogOut, Heart, Gift,
 } from "lucide-react";
 
 // ─── Admin Header ───
