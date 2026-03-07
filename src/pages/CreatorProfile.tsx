@@ -1,6 +1,6 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
-import { Users, FileText, Heart, Crown, UserPlus, BadgeCheck, UserCheck, Camera, Pencil, Check, X } from "lucide-react";
+import { Users, FileText, Heart, Crown, UserPlus, BadgeCheck, UserCheck, Camera, Pencil, Check, X, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import PostCard from "@/components/PostCard";
@@ -11,6 +11,7 @@ import type { Profile } from "@/contexts/AuthContext";
 
 const CreatorProfile = () => {
   const { username } = useParams<{ username: string }>();
+  const navigate = useNavigate();
   const { user, profile: myProfile, isAdmin } = useAuth();
   const [creator, setCreator] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
@@ -284,7 +285,7 @@ const CreatorProfile = () => {
             </div>
 
             {/* Actions */}
-            {!isOwnProfile && creator.verified && user && (
+            {!isOwnProfile && user && (
               <div className="flex gap-2 mt-4 justify-center">
                 <button
                   onClick={handleFollow}
@@ -298,17 +299,29 @@ const CreatorProfile = () => {
                   {isFollowing ? "Seguindo" : "Seguir"}
                 </button>
 
-                <button
-                  onClick={() => !isSubscribed && setSubscribeOpen(true)}
-                  className={`flex items-center gap-1.5 px-5 py-2 text-sm font-medium rounded-full transition-all ${
-                    isSubscribed
-                      ? "bg-accent/10 text-accent border border-accent/20"
-                      : "bg-foreground text-background hover:bg-foreground/90"
-                  }`}
-                >
-                  <Crown className="w-3.5 h-3.5" />
-                  {isSubscribed ? "Assinante" : "Assinar"}
-                </button>
+                {(creator.is_creator || creator.verified) && (
+                  <button
+                    onClick={() => !isSubscribed && setSubscribeOpen(true)}
+                    className={`flex items-center gap-1.5 px-5 py-2 text-sm font-medium rounded-full transition-all ${
+                      isSubscribed
+                        ? "bg-accent/10 text-accent border border-accent/20"
+                        : "bg-foreground text-background hover:bg-foreground/90"
+                    }`}
+                  >
+                    <Crown className="w-3.5 h-3.5" />
+                    {isSubscribed ? "Assinante" : "Assinar"}
+                  </button>
+                )}
+
+                {isSubscribed && (
+                  <button
+                    onClick={() => navigate("/chat")}
+                    className="p-2.5 rounded-full bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
+                    title="Enviar mensagem"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             )}
           </div>

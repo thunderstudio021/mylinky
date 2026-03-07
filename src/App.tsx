@@ -16,6 +16,9 @@ import AdminPanel from "./pages/AdminPanel";
 import BecomeCreator from "./pages/BecomeCreator";
 import Settings from "./pages/Settings";
 import Chat from "./pages/Chat";
+import Referral from "./pages/Referral";
+import Affiliates from "./pages/Affiliates";
+import Subscriptions from "./pages/Subscriptions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,11 +55,20 @@ const AppRoutes = () => (
       <Route path="/admin-panel" element={<AdminRoute><AdminPanel /></AdminRoute>} />
       <Route path="/chat" element={<AuthRoute><Chat /></AuthRoute>} />
       <Route path="/settings" element={<AuthRoute><Settings /></AuthRoute>} />
+      <Route path="/referral" element={<AuthRoute><Referral /></AuthRoute>} />
+      <Route path="/affiliates" element={<AuthRoute><Affiliates /></AuthRoute>} />
+      <Route path="/subscriptions" element={<AuthRoute><Subscriptions /></AuthRoute>} />
+      <Route path="/support" element={<SupportRedirect />} />
       <Route path="/:username" element={<CreatorProfile />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </>
 );
+
+const SupportRedirect = () => {
+  window.location.href = "https://wa.me/5521966555534";
+  return null;
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
