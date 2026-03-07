@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Save, Loader2, Eye, EyeOff, Lock, DollarSign, User } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Eye, EyeOff, Lock, DollarSign, User, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +25,7 @@ const Settings = () => {
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [category, setCategory] = useState("");
+  const [welcomeMessage, setWelcomeMessage] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
@@ -35,6 +36,12 @@ const Settings = () => {
       setUsername(profile.username || "");
       setBio(profile.bio || "");
       setCategory(profile.category || "");
+      // Fetch welcome_message directly since it may not be in Profile type
+      if (user) {
+        supabase.from("profiles").select("welcome_message").eq("id", user.id).single().then(({ data }) => {
+          setWelcomeMessage((data as any)?.welcome_message || "Seja muito bem-vindo(a)! Vamos conversar? 😏🔥");
+        });
+      }
       setLoading(false);
     }
   }, [profile]);
