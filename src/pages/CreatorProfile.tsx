@@ -28,6 +28,11 @@ const CreatorProfile = () => {
   const [bioValue, setBioValue] = useState("");
   const [uploading, setUploading] = useState(false);
 
+  // Crop modal state
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropImageUrl, setCropImageUrl] = useState("");
+  const [cropType, setCropType] = useState<"avatar" | "cover">("avatar");
+
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
@@ -89,43 +94,41 @@ const CreatorProfile = () => {
     toast.success("Assinatura ativada!");
   };
 
-  const uploadImage = async (file: File, path: string) => {
-    const ext = file.name.split(".").pop();
-    const filePath = `${path}/${user!.id}_${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("media").upload(filePath, file, { upsert: true });
+  const uploadBlob = async (blob: Blob, folder: string) => {
+    const filePath = `${folder}/${user!.id}_${Date.now()}.jpg`;
+    const { error } = await supabase.storage.from("media").upload(filePath, blob, { upsert: true, contentType: "image/jpeg" });
     if (error) throw error;
     const { data } = supabase.storage.from("media").getPublicUrl(filePath);
     return data.publicUrl;
   };
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "avatar" | "cover") => {
     const file = e.target.files?.[0];
-    if (!file || !creator) return;
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setCropType(type);
+    setCropImageUrl(url);
+    setCropOpen(true);
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+  };
+
+  const handleCropConfirm = async (blob: Blob) => {
+    if (!creator) return;
+    setCropOpen(false);
     setUploading(true);
     try {
-      const url = await uploadImage(file, "avatars");
-      await supabase.from("profiles").update({ avatar_url: url }).eq("id", creator.id);
-      setCreator({ ...creator, avatar_url: url });
-      toast.success("Foto de perfil atualizada!");
+      const folder = cropType === "avatar" ? "avatars" : "covers";
+      const field = cropType === "avatar" ? "avatar_url" : "cover_url";
+      const url = await uploadBlob(blob, folder);
+      await supabase.from("profiles").update({ [field]: url }).eq("id", creator.id);
+      setCreator({ ...creator, [field]: url });
+      toast.success(cropType === "avatar" ? "Foto de perfil atualizada!" : "Foto de capa atualizada!");
     } catch {
       toast.error("Erro ao enviar foto");
     }
     setUploading(false);
   };
-
-  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !creator) return;
-    setUploading(true);
-    try {
-      const url = await uploadImage(file, "covers");
-      await supabase.from("profiles").update({ cover_url: url }).eq("id", creator.id);
-      setCreator({ ...creator, cover_url: url });
-      toast.success("Foto de capa atualizada!");
-    } catch {
-      toast.error("Erro ao enviar capa");
-    }
-    setUploading(false);
   };
 
   const saveName = async () => {
