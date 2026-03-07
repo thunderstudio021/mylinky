@@ -84,11 +84,11 @@ const CreatorProfile = () => {
     setFollowLoading(false);
   };
 
-  const handleSubscribeConfirm = async (plan: "monthly" | "yearly") => {
+  const handleSubscribeConfirm = async (plan: "monthly" | "yearly", method: "pix" | "credit_card") => {
     if (!user || !creator) return;
     const amount = plan === "monthly" ? creator.price_monthly : creator.price_yearly;
     await supabase.from("subscriptions").insert({
-      subscriber_id: user.id, creator_id: creator.id, plan, amount,
+      subscriber_id: user.id, creator_id: creator.id, plan, amount, payment_method: method,
     });
     setIsSubscribed(true);
     setCreator({ ...creator, subscribers_count: creator.subscribers_count + 1 });

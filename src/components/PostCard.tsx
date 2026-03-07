@@ -135,21 +135,21 @@ const PostCard = ({
     setDeleting(false);
   };
 
-  const handleSubscribeConfirm = async (plan: "monthly" | "yearly") => {
+  const handleSubscribeConfirm = async (plan: "monthly" | "yearly", method: "pix" | "credit_card") => {
     if (!currentUserId || !creatorId) return;
     const amount = plan === "monthly" ? (creatorPriceMonthly || 0) : (creatorPriceYearly || 0);
     await supabase.from("subscriptions").insert({
-      subscriber_id: currentUserId, creator_id: creatorId, plan, amount,
+      subscriber_id: currentUserId, creator_id: creatorId, plan, amount, payment_method: method,
     });
     setLocalSubscribed(true);
     toast.success("Assinatura ativada!");
     onUnlocked?.();
   };
 
-  const handlePaymentConfirm = async () => {
+  const handlePaymentConfirm = async (method: "pix" | "credit_card") => {
     if (!currentUserId || !creatorId) return;
     await supabase.from("ppv_purchases").insert({
-      buyer_id: currentUserId, post_id: String(id), amount: price || 0,
+      buyer_id: currentUserId, post_id: String(id), amount: price || 0, payment_method: method,
     });
     setLocalPurchased(true);
     toast.success("Conteúdo desbloqueado!");
