@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Camera, Video, FileText, BarChart3, X, Image, Upload, Eye, Crown, DollarSign, Lock, ArrowLeft, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 type PostType = "free" | "subscribers" | "ppv" | "ppv-subscribers";
@@ -20,7 +21,8 @@ const postTypeOptions: { value: PostType; label: string; icon: any; description:
 ];
 
 const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const [publishing, setPublishing] = useState(false);
   const [step, setStep] = useState<"type" | "form">("type");
   const [contentType, setContentType] = useState<ContentType | null>(null);
   const [postType, setPostType] = useState<PostType>("free");
@@ -65,7 +67,7 @@ const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
 
   const needsPostType = contentType === "photo" || contentType === "video";
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!text.trim() && !mediaFile && contentType !== "poll") {
       toast.error("Adicione conteúdo à sua publicação");
       return;
@@ -82,8 +84,42 @@ const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
       return;
     }
 
-    toast.success("Publicação criada com sucesso!");
-    handleClose();
+    setPublishing(true);
+    try {
+      let media_url = "";
+      let media_type = "";
+
+      // Upload media if present
+      if (mediaFile && user) {
+        const ext = mediaFile.name.split(".").pop();
+        const path = `${user.id}/${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("media")
+          .upload(path, mediaFile);
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+        media_url = urlData.publicUrl;
+        media_type = contentType === "photo" ? "photo" : "video";
+      }
+
+      // Insert post
+      const { error } = await supabase.from("posts").insert({
+        creator_id: user!.id,
+        content: text,
+        media_url,
+        media_type: media_type || (contentType === "text" ? "" : ""),
+        post_visibility: needsPostType ? postType : "free",
+        ppv_price: (postType === "ppv" || postType === "ppv-subscribers") ? parseFloat(ppvPrice) || 0 : 0,
+      });
+
+      if (error) throw error;
+      toast.success("Publicação criada com sucesso!");
+      handleClose();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao publicar");
+    } finally {
+      setPublishing(false);
+    }
   };
 
   const addPollOption = () => {
@@ -151,12 +187,16 @@ const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
                 <div className="p-4 space-y-4">
                   {/* User info */}
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-foreground text-sm font-semibold">
-                      {user?.name[0]}
+                    <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-foreground text-sm font-semibold overflow-hidden">
+                      {profile?.avatar_url ? (
+                        <img src={profile.avatar_url} alt={profile.name} className="w-full h-full object-cover" />
+                      ) : (
+                        profile?.name?.[0] || "U"
+                      )}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">{user?.name}</p>
-                      <p className="text-xs text-muted-foreground">@{user?.username}</p>
+                      <p className="text-sm font-medium text-foreground">{profile?.name}</p>
+                      <p className="text-xs text-muted-foreground">@{profile?.username}</p>
                     </div>
                   </div>
 

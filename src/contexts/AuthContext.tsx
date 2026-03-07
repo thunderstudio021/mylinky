@@ -1,135 +1,147 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 
-export type UserRole = "user" | "creator" | "admin";
-
-export interface User {
+export interface Profile {
   id: string;
   name: string;
   username: string;
   email: string;
-  role: UserRole;
-  avatar?: string;
-  verified?: boolean;
-  bio?: string;
-  category?: string;
-  price?: number;
-  followers?: number;
-  subscribers?: number;
+  bio: string;
+  avatar_url: string;
+  cover_url: string;
+  category: string;
+  price_monthly: number;
+  price_yearly: number;
+  verified: boolean;
+  followers_count: number;
+  subscribers_count: number;
 }
 
-const testUsers: Record<string, { password: string; user: User }> = {
-  "admin@gmail.com": {
-    password: "admin",
-    user: {
-      id: "1",
-      name: "Admin Master",
-      username: "admin",
-      email: "admin@gmail.com",
-      role: "admin",
-      verified: true,
-    },
-  },
-  "luna@email.com": {
-    password: "123456",
-    user: {
-      id: "2",
-      name: "Luna Dark",
-      username: "lunadark",
-      email: "luna@email.com",
-      role: "creator",
-      verified: true,
-      bio: "Fotógrafa profissional & criadora de conteúdo. Compartilhando arte exclusiva, bastidores e ensaios premium. 📸",
-      category: "Fotografia",
-      price: 39.90,
-      followers: 45200,
-      subscribers: 1247,
-    },
-  },
-  "marcus@email.com": {
-    password: "123456",
-    user: {
-      id: "3",
-      name: "Marcus Vibe",
-      username: "marcusvibe",
-      email: "marcus@email.com",
-      role: "creator",
-      verified: true,
-      bio: "Produtor musical e artista independente 🎵",
-      category: "Música",
-      price: 29.90,
-      followers: 32100,
-      subscribers: 892,
-    },
-  },
-  "joao@email.com": {
-    password: "123456",
-    user: {
-      id: "4",
-      name: "João Silva",
-      username: "joaosilva",
-      email: "joao@email.com",
-      role: "user",
-    },
-  },
-  "maria@email.com": {
-    password: "123456",
-    user: {
-      id: "5",
-      name: "Maria Santos",
-      username: "mariasantos",
-      email: "maria@email.com",
-      role: "user",
-    },
-  },
-};
-
 interface AuthContextType {
-  user: User | null;
-  login: (email: string, password: string) => boolean;
-  logout: () => void;
+  user: SupabaseUser | null;
+  profile: Profile | null;
+  loading: boolean;
   isAdmin: boolean;
   isCreator: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  signup: (email: string, password: string, name: string, username: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  login: () => false,
-  logout: () => {},
+  profile: null,
+  loading: true,
   isAdmin: false,
   isCreator: false,
+  login: async () => false,
+  signup: async () => ({ success: false }),
+  logout: async () => {},
+  refreshProfile: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem("fanvault_user");
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isCreator, setIsCreator] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const login = (email: string, password: string): boolean => {
-    const entry = testUsers[email.toLowerCase()];
-    if (entry && entry.password === password) {
-      setUser(entry.user);
-      localStorage.setItem("fanvault_user", JSON.stringify(entry.user));
-      return true;
-    }
-    return false;
+  const fetchProfile = async (userId: string) => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+    if (data) setProfile(data as Profile);
+    return data as Profile | null;
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("fanvault_user");
+  const fetchRoles = async (userId: string) => {
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+    const roles = data?.map((r: any) => r.role) || [];
+    setIsAdmin(roles.includes("admin"));
+    // Creator = verified profile (approved by admin)
+  };
+
+  const refreshProfile = async () => {
+    if (user) {
+      const p = await fetchProfile(user.id);
+      if (p) setIsCreator(p.verified);
+      await fetchRoles(user.id);
+    }
+  };
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        if (currentUser) {
+          // Use setTimeout to avoid potential deadlocks with Supabase
+          setTimeout(async () => {
+            const p = await fetchProfile(currentUser.id);
+            if (p) setIsCreator(p.verified);
+            await fetchRoles(currentUser.id);
+            setLoading(false);
+          }, 0);
+        } else {
+          setProfile(null);
+          setIsAdmin(false);
+          setIsCreator(false);
+          setLoading(false);
+        }
+      }
+    );
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return !error;
+  };
+
+  const signup = async (email: string, password: string, name: string, username: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name, username },
+        emailRedirectTo: window.location.origin,
+      },
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        profile,
+        loading,
+        isAdmin,
+        isCreator,
         login,
+        signup,
         logout,
-        isAdmin: user?.role === "admin",
-        isCreator: user?.role === "creator",
+        refreshProfile,
       }}
     >
       {children}

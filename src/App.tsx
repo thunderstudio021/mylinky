@@ -13,18 +13,27 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import CreatorDashboard from "./pages/CreatorDashboard";
 import AdminPanel from "./pages/AdminPanel";
+import BecomeCreator from "./pages/BecomeCreator";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, loading } = useAuth();
+  if (loading) return null;
   return isAdmin ? <>{children}</> : <Navigate to="/" replace />;
 };
 
 const CreatorRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isCreator } = useAuth();
+  const { isCreator, loading } = useAuth();
+  if (loading) return null;
   return isCreator ? <>{children}</> : <Navigate to="/" replace />;
+};
+
+const AuthRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  return user ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
 const AppRoutes = () => (
@@ -34,11 +43,12 @@ const AppRoutes = () => (
       <Route path="/" element={<Index />} />
       <Route path="/explore" element={<Explore />} />
       <Route path="/search" element={<Search />} />
-      <Route path="/:username" element={<CreatorProfile />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/become-creator" element={<AuthRoute><BecomeCreator /></AuthRoute>} />
       <Route path="/dashboard" element={<CreatorRoute><CreatorDashboard /></CreatorRoute>} />
       <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+      <Route path="/:username" element={<CreatorProfile />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </>
