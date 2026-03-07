@@ -1,9 +1,11 @@
-import { Heart, MessageCircle, BadgeCheck, X, Play, Gift, MoreVertical, Pencil, Trash2, MessageSquareOff } from "lucide-react";
+import { Heart, MessageCircle, BadgeCheck, X, Play, Gift, MoreVertical, Pencil, Trash2, MessageSquareOff, Lock, Crown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import GiftModal from "./GiftModal";
 import AuthOverlay from "./AuthOverlay";
+import SubscribeModal from "./SubscribeModal";
+import PaymentModal from "./PaymentModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -35,7 +37,8 @@ interface PostCardProps {
 
 const PostCard = ({
   id, creator, content, image, video, likes, comments, timeAgo,
-  isOwner, isAdmin, currentUserId, mediaType, onDelete, onEdit,
+  isOwner, isAdmin, isSubscribed, hasPurchased, currentUserId, mediaType,
+  onDelete, onEdit, type, price, creatorId, creatorPriceMonthly, creatorPriceYearly, onUnlocked,
 }: PostCardProps) => {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(likes);
@@ -44,6 +47,10 @@ const PostCard = ({
   const [giftOpen, setGiftOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [subscribeOpen, setSubscribeOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [localSubscribed, setLocalSubscribed] = useState(isSubscribed || false);
+  const [localPurchased, setLocalPurchased] = useState(hasPurchased || false);
 
   // Poll state
   const [pollData, setPollData] = useState<{ id: string; options: { id: string; text: string; votes_count: number }[] } | null>(null);
@@ -53,6 +60,23 @@ const PostCard = ({
   const isVideo = !!video;
   const isPoll = mediaType === "poll";
 
+  // Determine if content is locked
+  const isContentLocked = (() => {
+    if (isOwner || isAdmin) return false;
+    if (type === "free") return false;
+    if (type === "subscribers" && localSubscribed) return false;
+    if (type === "ppv" && localPurchased) return false;
+    if (type === "ppv-subscribers" && (localSubscribed || localPurchased)) return false;
+    return true;
+  })();
+
+  const needsSubscription = type === "subscribers" || (type === "ppv-subscribers" && !localPurchased);
+  const needsPayment = type === "ppv" || (type === "ppv-subscribers" && !localSubscribed);
+
+  // Sync props
+  useEffect(() => { setLocalSubscribed(isSubscribed || false); }, [isSubscribed]);
+  useEffect(() => { setLocalPurchased(hasPurchased || false); }, [hasPurchased]);
+
   // Load poll data
   useEffect(() => {
     if (!isPoll) return;
@@ -60,12 +84,9 @@ const PostCard = ({
       const { data: poll } = await supabase
         .from("polls").select("id").eq("post_id", String(id)).maybeSingle();
       if (!poll) return;
-
       const { data: options } = await supabase
         .from("poll_options").select("id, text, votes_count").eq("poll_id", poll.id).order("position");
-
       setPollData({ id: poll.id, options: options || [] });
-
       if (currentUserId) {
         const { data: vote } = await supabase
           .from("poll_votes").select("option_id").eq("poll_id", poll.id).eq("user_id", currentUserId).maybeSingle();
@@ -79,9 +100,7 @@ const PostCard = ({
     if (!currentUserId || userVote || voting || !pollData) return;
     setVoting(true);
     const { error } = await supabase.from("poll_votes").insert({
-      poll_id: pollData.id,
-      option_id: optionId,
-      user_id: currentUserId,
+      poll_id: pollData.id, option_id: optionId, user_id: currentUserId,
     });
     if (error) {
       toast.error(error.message.includes("unique") ? "Você já votou nesta enquete" : "Erro ao votar");
@@ -116,7 +135,31 @@ const PostCard = ({
     setDeleting(false);
   };
 
+  const handleSubscribeConfirm = async (plan: "monthly" | "yearly") => {
+    if (!currentUserId || !creatorId) return;
+    const amount = plan === "monthly" ? (creatorPriceMonthly || 0) : (creatorPriceYearly || 0);
+    await supabase.from("subscriptions").insert({
+      subscriber_id: currentUserId, creator_id: creatorId, plan, amount,
+    });
+    setLocalSubscribed(true);
+    toast.success("Assinatura ativada!");
+    onUnlocked?.();
+  };
+
+  const handlePaymentConfirm = async () => {
+    if (!currentUserId || !creatorId) return;
+    await supabase.from("ppv_purchases").insert({
+      buyer_id: currentUserId, post_id: String(id), amount: price || 0,
+    });
+    setLocalPurchased(true);
+    toast.success("Conteúdo desbloqueado!");
+    onUnlocked?.();
+  };
+
   const showMenu = isOwner || isAdmin;
+
+  // Truncate content for locked posts
+  const displayContent = isContentLocked ? content.substring(0, 80) + (content.length > 80 ? "..." : "") : content;
 
   return (
     <>
@@ -179,72 +222,151 @@ const PostCard = ({
 
         {/* Content */}
         <div className="px-4 pb-3">
-          <p className="text-sm text-foreground/85 leading-relaxed">{content}</p>
+          <p className="text-sm text-foreground/85 leading-relaxed">{displayContent}</p>
         </div>
 
-        {/* Poll */}
-        {isPoll && pollData && (
-          <div className="px-4 pb-4 space-y-2">
-            {pollData.options.map((option) => {
-              const pct = totalVotes > 0 ? Math.round((option.votes_count / totalVotes) * 100) : 0;
-              const isVoted = userVote === option.id;
-              const hasVoted = !!userVote;
-
-              return (
-                <button
-                  key={option.id}
-                  onClick={() => handleVote(option.id)}
-                  disabled={hasVoted || voting || !currentUserId}
-                  className={`relative w-full text-left px-4 py-3 rounded-lg border transition-colors overflow-hidden ${
-                    isVoted
-                      ? "border-foreground/40 bg-secondary"
-                      : hasVoted
-                        ? "border-border bg-card"
-                        : "border-border hover:border-foreground/30 hover:bg-secondary/50"
-                  }`}
-                >
-                  {hasVoted && (
-                    <div
-                      className="absolute inset-y-0 left-0 bg-foreground/10 transition-all duration-500"
-                      style={{ width: `${pct}%` }}
-                    />
-                  )}
-                  <div className="relative flex items-center justify-between">
-                    <span className={`text-sm ${isVoted ? "font-medium text-foreground" : "text-foreground/80"}`}>
-                      {option.text}
-                    </span>
-                    {hasVoted && (
-                      <span className="text-xs font-medium text-muted-foreground ml-2">{pct}%</span>
-                    )}
+        {/* Locked overlay for media/poll */}
+        {isContentLocked ? (
+          <div className="relative">
+            {/* Blurred media preview */}
+            {(image || video) && !isPoll && (
+              <div className="relative overflow-hidden">
+                {isVideo ? (
+                  <div className="relative w-full" style={{ aspectRatio: "9/16" }}>
+                    <video src={video} className="w-full h-full object-cover blur-xl scale-110" muted playsInline />
                   </div>
-                </button>
-              );
-            })}
-            <p className="text-xs text-muted-foreground pt-1">{totalVotes} {totalVotes === 1 ? "voto" : "votos"}</p>
-          </div>
-        )}
+                ) : (
+                  <img src={image} alt="" className="w-full object-cover blur-xl scale-110" style={{ aspectRatio: "4/5" }} />
+                )}
+              </div>
+            )}
 
-        {/* Media */}
-        {(image || video) && !isPoll && (
-          <div className="relative cursor-pointer" onClick={() => isVideo ? setVideoPlaying(true) : setFullscreen(true)}>
-            {isVideo ? (
-              <div className="relative w-full" style={{ aspectRatio: "9/16" }}>
-                <video src={video} className="w-full h-full object-cover" muted playsInline loop />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-opacity hover:bg-black/20">
-                  <div className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center transition-transform duration-200 hover:scale-110">
-                    <Play className="w-5 h-5 text-white ml-0.5 drop-shadow-sm" />
-                  </div>
+            {/* Blurred poll preview */}
+            {isPoll && (
+              <div className="px-4 pb-4 blur-lg select-none pointer-events-none">
+                <div className="space-y-2">
+                  <div className="h-10 rounded-lg bg-secondary" />
+                  <div className="h-10 rounded-lg bg-secondary" />
                 </div>
               </div>
-            ) : (
-              <img src={image} alt="" className="w-full object-cover" style={{ aspectRatio: "4/5" }} />
             )}
+
+            {/* No media placeholder */}
+            {!image && !video && !isPoll && (
+              <div className="h-32 bg-secondary/30" />
+            )}
+
+            {/* Lock overlay */}
+            <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex flex-col items-center justify-center gap-3 p-6">
+              <div className="w-10 h-10 rounded-full bg-secondary/80 flex items-center justify-center">
+                <Lock className="w-5 h-5 text-muted-foreground" />
+              </div>
+
+              {type === "subscribers" && (
+                <>
+                  <p className="text-sm text-foreground font-medium text-center">Conteúdo exclusivo para assinantes</p>
+                  <button
+                    onClick={() => setSubscribeOpen(true)}
+                    className="flex items-center gap-1.5 px-5 py-2 text-sm font-medium rounded-full bg-foreground text-background hover:bg-foreground/90 transition-colors"
+                  >
+                    <Crown className="w-3.5 h-3.5" />
+                    Assinar por R${Number(creatorPriceMonthly || 0).toFixed(2)}/mês
+                  </button>
+                </>
+              )}
+
+              {type === "ppv" && (
+                <>
+                  <p className="text-sm text-foreground font-medium text-center">Conteúdo pago</p>
+                  <button
+                    onClick={() => setPaymentOpen(true)}
+                    className="px-5 py-2 text-sm font-medium rounded-full bg-foreground text-background hover:bg-foreground/90 transition-colors"
+                  >
+                    Desbloquear por R${Number(price || 0).toFixed(2)}
+                  </button>
+                </>
+              )}
+
+              {type === "ppv-subscribers" && (
+                <>
+                  <p className="text-sm text-foreground font-medium text-center">Conteúdo exclusivo</p>
+                  <div className="flex flex-col gap-2 items-center">
+                    <button
+                      onClick={() => setSubscribeOpen(true)}
+                      className="flex items-center gap-1.5 px-5 py-2 text-sm font-medium rounded-full bg-foreground text-background hover:bg-foreground/90 transition-colors"
+                    >
+                      <Crown className="w-3.5 h-3.5" />
+                      Assinar por R${Number(creatorPriceMonthly || 0).toFixed(2)}/mês
+                    </button>
+                    <span className="text-xs text-muted-foreground">ou</span>
+                    <button
+                      onClick={() => setPaymentOpen(true)}
+                      className="px-5 py-2 text-sm font-medium rounded-full border border-foreground/20 text-foreground hover:bg-secondary transition-colors"
+                    >
+                      Pagar R${Number(price || 0).toFixed(2)} uma vez
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
+        ) : (
+          <>
+            {/* Poll */}
+            {isPoll && pollData && (
+              <div className="px-4 pb-4 space-y-2">
+                {pollData.options.map((option) => {
+                  const pct = totalVotes > 0 ? Math.round((option.votes_count / totalVotes) * 100) : 0;
+                  const isVoted = userVote === option.id;
+                  const hasVoted = !!userVote;
+                  return (
+                    <button
+                      key={option.id}
+                      onClick={() => handleVote(option.id)}
+                      disabled={hasVoted || voting || !currentUserId}
+                      className={`relative w-full text-left px-4 py-3 rounded-lg border transition-colors overflow-hidden ${
+                        isVoted ? "border-foreground/40 bg-secondary"
+                          : hasVoted ? "border-border bg-card"
+                          : "border-border hover:border-foreground/30 hover:bg-secondary/50"
+                      }`}
+                    >
+                      {hasVoted && (
+                        <div className="absolute inset-y-0 left-0 bg-foreground/10 transition-all duration-500" style={{ width: `${pct}%` }} />
+                      )}
+                      <div className="relative flex items-center justify-between">
+                        <span className={`text-sm ${isVoted ? "font-medium text-foreground" : "text-foreground/80"}`}>{option.text}</span>
+                        {hasVoted && <span className="text-xs font-medium text-muted-foreground ml-2">{pct}%</span>}
+                      </div>
+                    </button>
+                  );
+                })}
+                <p className="text-xs text-muted-foreground pt-1">{totalVotes} {totalVotes === 1 ? "voto" : "votos"}</p>
+              </div>
+            )}
+
+            {/* Media */}
+            {(image || video) && !isPoll && (
+              <div className="relative cursor-pointer" onClick={() => isVideo ? setVideoPlaying(true) : setFullscreen(true)}>
+                {isVideo ? (
+                  <div className="relative w-full" style={{ aspectRatio: "9/16" }}>
+                    <video src={video} className="w-full h-full object-cover" muted playsInline loop />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-opacity hover:bg-black/20">
+                      <div className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center transition-transform duration-200 hover:scale-110">
+                        <Play className="w-5 h-5 text-white ml-0.5 drop-shadow-sm" />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <img src={image} alt="" className="w-full object-cover" style={{ aspectRatio: "4/5" }} />
+                )}
+              </div>
+            )}
+          </>
         )}
 
         {/* Actions */}
         <div className="flex items-center gap-5 px-4 py-3">
-          <button onClick={() => { setLiked(!liked); setLikeCount(liked ? likeCount - 1 : likeCount + 1); }} className="flex items-center gap-1.5">
+          <button onClick={() => { if (!isContentLocked) { setLiked(!liked); setLikeCount(liked ? likeCount - 1 : likeCount + 1); } }} className="flex items-center gap-1.5">
             <Heart className={`w-[18px] h-[18px] transition-colors ${liked ? "fill-accent text-accent" : "text-muted-foreground hover:text-foreground"}`} />
             <span className="text-xs text-muted-foreground">{likeCount}</span>
           </button>
@@ -252,7 +374,7 @@ const PostCard = ({
             <MessageCircle className="w-[18px] h-[18px]" />
             <span className="text-xs">{comments}</span>
           </button>
-          {!isOwner && currentUserId && (
+          {!isOwner && currentUserId && !isContentLocked && (
             <button onClick={() => setGiftOpen(true)} className="text-muted-foreground hover:text-foreground transition-colors">
               <Gift className="w-[18px] h-[18px]" />
             </button>
@@ -282,6 +404,24 @@ const PostCard = ({
 
       {/* Gift Modal */}
       <GiftModal open={giftOpen} onClose={() => setGiftOpen(false)} creatorName={creator.name} onConfirm={handleGiftConfirm} />
+
+      {/* Subscribe Modal */}
+      <SubscribeModal
+        open={subscribeOpen}
+        onClose={() => setSubscribeOpen(false)}
+        creatorName={creator.name}
+        priceMonthly={creatorPriceMonthly || 0}
+        priceYearly={creatorPriceYearly || 0}
+        onConfirm={handleSubscribeConfirm}
+      />
+
+      {/* Payment Modal */}
+      <PaymentModal
+        open={paymentOpen}
+        onClose={() => setPaymentOpen(false)}
+        amount={price || 0}
+        onConfirm={handlePaymentConfirm}
+      />
     </>
   );
 };
