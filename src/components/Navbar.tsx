@@ -19,10 +19,11 @@ const Navbar = () => {
 
   const notificationCount = 3; // mock
 
+  const canCreate = isCreator || isAdmin;
   const bottomItems = [
     { path: "/", icon: Home },
     { path: "/explore", icon: Compass },
-    ...(isCreator ? [{ path: "#create", icon: Plus, isCreate: true }] : []),
+    ...(canCreate ? [{ path: "#create", icon: Plus, isCreate: true }] : []),
     { path: "/search", icon: Search },
   ];
 
@@ -68,7 +69,7 @@ const Navbar = () => {
               </button>
             </Link>
           ))}
-          {isCreator && (
+          {canCreate && (
             <button
               onClick={() => setCreateOpen(true)}
               className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -201,7 +202,7 @@ const Navbar = () => {
               <MenuItem icon={Link2} label="Indicação" onClick={() => { navigate("/referral"); setMenuOpen(false); }} />
               <MenuItem icon={Users2} label="Afiliações" onClick={() => { navigate("/affiliates"); setMenuOpen(false); }} />
 
-              {isCreator && (
+              {(isCreator || isAdmin) && (
                 <>
                   <div className="border-t border-border my-3" />
                   <p className="text-xs font-semibold text-foreground px-3 py-2">Financeiro</p>
