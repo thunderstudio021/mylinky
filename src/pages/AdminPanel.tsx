@@ -104,7 +104,7 @@ const AdminPanel = () => {
                   {tab === "pending" && (
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleApprove(app.id, app.user_id)}
+                        onClick={() => handleApprove(app.id)}
                         className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium bg-foreground text-background rounded-md hover:bg-foreground/90 transition-colors"
                       >
                         <CheckCircle className="w-3.5 h-3.5" /> Aprovar
