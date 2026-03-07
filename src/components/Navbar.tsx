@@ -23,7 +23,8 @@ const Navbar = () => {
   const notificationCount = useUnreadNotifications();
 
   const isAuthPage = location.pathname === "/login" || location.pathname === "/register";
-  if (isAuthPage) return null;
+  const isAdminPage = location.pathname === "/admin-panel";
+  if (isAuthPage || isAdminPage) return null;
 
 
   const canCreate = isCreator || isAdmin;
