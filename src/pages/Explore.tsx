@@ -1,71 +1,175 @@
-import CreatorCard from "@/components/CreatorCard";
-import { Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { Users, BadgeCheck, Crown } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
-const allCreators = [
-  { name: "Luna Dark", username: "lunadark", avatar: "", category: "Fotografia", followers: 45200, price: 39.90, verified: true },
-  { name: "Marcus Vibe", username: "marcusvibe", avatar: "", category: "Música", followers: 32100, price: 29.90, verified: true },
-  { name: "Aria Rose", username: "ariarose", avatar: "", category: "Arte & Design", followers: 28700, price: 24.90, verified: true },
-  { name: "Jake Steel", username: "jakesteel", avatar: "", category: "Fitness", followers: 61400, price: 49.90, verified: true },
-  { name: "Sofia Night", username: "sofianight", avatar: "", category: "Dança", followers: 19300, price: 19.90, verified: true },
-  { name: "Diego Flame", username: "diegoflame", avatar: "", category: "Culinária", followers: 15800, price: 14.90, verified: true },
-  { name: "Mia Storm", username: "miastorm", avatar: "", category: "Moda", followers: 52400, price: 34.90, verified: true },
-  { name: "Leo Beats", username: "leobeats", avatar: "", category: "Música", followers: 41200, price: 29.90, verified: true },
-];
+interface Creator {
+  id: string;
+  name: string;
+  username: string;
+  avatar_url: string | null;
+  bio: string | null;
+  followers_count: number;
+  price_monthly: number;
+  verified: boolean;
+}
 
-const categories = ["Todos", "Fotografia", "Música", "Arte & Design", "Fitness", "Dança", "Culinária", "Moda"];
+const formatFollowers = (n: number) => {
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return n.toString();
+};
+
+const TopBadge = ({ rank }: { rank: number }) => {
+  const colors: Record<number, string> = {
+    1: "from-[hsl(45,80%,50%)] to-[hsl(35,90%,45%)]",
+    2: "from-[hsl(0,0%,65%)] to-[hsl(0,0%,50%)]",
+    3: "from-[hsl(25,60%,45%)] to-[hsl(20,50%,35%)]",
+  };
+
+  return (
+    <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r ${colors[rank]} text-[10px] font-bold text-background uppercase tracking-wider`}>
+      <Crown className="w-3 h-3" />
+      Top {rank}
+    </div>
+  );
+};
 
 const Explore = () => {
-  const [activeCategory, setActiveCategory] = useState("Todos");
-  const [search, setSearch] = useState("");
+  const [creators, setCreators] = useState<Creator[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = allCreators.filter((c) => {
-    const matchCategory = activeCategory === "Todos" || c.category === activeCategory;
-    const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.username.toLowerCase().includes(search.toLowerCase());
-    return matchCategory && matchSearch;
-  });
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, name, username, avatar_url, bio, followers_count, price_monthly, verified")
+        .eq("verified", true)
+        .order("followers_count", { ascending: false });
+
+      setCreators((data as Creator[]) || []);
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background pt-14 md:pt-[72px] flex items-center justify-center">
+        <p className="text-sm text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
+
+  const topCreators = creators.slice(0, 3);
+  const otherCreators = creators.slice(3);
 
   return (
     <div className="min-h-screen bg-background pt-14 md:pt-[72px] pb-20 md:pb-8">
-      <div className="max-w-5xl mx-auto px-4 md:px-6">
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold text-foreground">Explorar</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Descubra criadores incríveis</p>
+      <div className="max-w-2xl mx-auto px-5 md:px-6">
+        {/* Header */}
+        <div className="mb-8 pt-2">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Explorar</h1>
+          <p className="text-sm text-muted-foreground mt-1">Criadores em destaque</p>
         </div>
 
-        {/* Search */}
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            placeholder="Buscar criadores..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-muted-foreground transition-colors"
-          />
-        </div>
+        {/* Top 3 */}
+        {topCreators.length > 0 && (
+          <div className="space-y-3 mb-8">
+            {topCreators.map((creator, i) => (
+              <Link
+                key={creator.id}
+                to={`/${creator.username}`}
+                className="block group"
+              >
+                <div className={`relative bg-card border border-border rounded-xl p-5 hover:border-muted-foreground/30 transition-all ${
+                  i === 0 ? "border-[hsl(45,80%,50%)]/20 bg-gradient-to-r from-card to-[hsl(45,80%,50%)]/[0.03]" : ""
+                }`}>
+                  <div className="flex items-center gap-4">
+                    {/* Avatar */}
+                    <div className={`shrink-0 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold overflow-hidden ${
+                      i === 0 ? "w-16 h-16 text-xl" : "w-13 h-13 text-lg"
+                    }`}
+                      style={{ width: i === 0 ? 64 : 52, height: i === 0 ? 64 : 52 }}
+                    >
+                      {creator.avatar_url ? (
+                        <img src={creator.avatar_url} alt={creator.name} className="w-full h-full object-cover" />
+                      ) : creator.name[0]}
+                    </div>
 
-        {/* Categories */}
-        <div className="flex gap-1.5 mb-6 overflow-x-auto pb-1">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`whitespace-nowrap px-3 py-1.5 text-xs rounded-md transition-colors ${
-                activeCategory === cat
-                  ? "bg-foreground text-background font-medium"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <TopBadge rank={i + 1} />
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <span className={`font-semibold text-foreground truncate group-hover:underline ${
+                          i === 0 ? "text-base" : "text-sm"
+                        }`}>{creator.name}</span>
+                        {creator.verified && <BadgeCheck className="w-4 h-4 text-accent shrink-0" />}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">@{creator.username}</p>
+                    </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filtered.map((creator, i) => (
-            <CreatorCard key={creator.username} {...creator} index={i} />
-          ))}
-        </div>
+                    {/* Stats */}
+                    <div className="text-right shrink-0">
+                      <div className="flex items-center gap-1 text-muted-foreground justify-end">
+                        <Users className="w-3.5 h-3.5" />
+                        <span className="text-sm font-medium text-foreground">{formatFollowers(creator.followers_count)}</span>
+                      </div>
+                      {creator.price_monthly > 0 && (
+                        <p className="text-[11px] text-muted-foreground mt-1">R${Number(creator.price_monthly).toFixed(2)}/mês</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {/* Other creators */}
+        {otherCreators.length > 0 && (
+          <>
+            <div className="mb-4">
+              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Todos os criadores</h2>
+            </div>
+            <div className="space-y-2">
+              {otherCreators.map((creator) => (
+                <Link
+                  key={creator.id}
+                  to={`/${creator.username}`}
+                  className="block group"
+                >
+                  <div className="bg-card border border-border rounded-lg px-4 py-3.5 hover:border-muted-foreground/30 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold text-sm shrink-0 overflow-hidden">
+                        {creator.avatar_url ? (
+                          <img src={creator.avatar_url} alt={creator.name} className="w-full h-full object-cover" />
+                        ) : creator.name[0]}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-medium text-foreground truncate group-hover:underline">{creator.name}</span>
+                          {creator.verified && <BadgeCheck className="w-3.5 h-3.5 text-accent shrink-0" />}
+                        </div>
+                        <p className="text-xs text-muted-foreground">@{creator.username}</p>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Users className="w-3 h-3" />
+                        <span>{formatFollowers(creator.followers_count)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
+
+        {creators.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-16">Nenhum criador ativo no momento.</p>
+        )}
       </div>
     </div>
   );
