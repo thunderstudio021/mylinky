@@ -68,13 +68,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .eq("user_id", userId);
     const roles = data?.map((r: any) => r.role) || [];
     setIsAdmin(roles.includes("admin"));
-    // Creator = verified profile (approved by admin)
   };
 
   const refreshProfile = async () => {
     if (user) {
       const p = await fetchProfile(user.id);
-      if (p) setIsCreator(p.verified);
+      if (p) setIsCreator((p as any).is_creator || p.verified);
       await fetchRoles(user.id);
     }
   };
@@ -88,7 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Use setTimeout to avoid potential deadlocks with Supabase
           setTimeout(async () => {
             const p = await fetchProfile(currentUser.id);
-            if (p) setIsCreator(p.verified);
+            if (p) setIsCreator((p as any).is_creator || p.verified);
             await fetchRoles(currentUser.id);
             setLoading(false);
           }, 0);

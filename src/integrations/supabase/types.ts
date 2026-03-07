@@ -338,6 +338,7 @@ export type Database = {
           email: string
           followers_count: number | null
           id: string
+          is_creator: boolean | null
           name: string
           price_monthly: number | null
           price_yearly: number | null
@@ -357,6 +358,7 @@ export type Database = {
           email: string
           followers_count?: number | null
           id: string
+          is_creator?: boolean | null
           name: string
           price_monthly?: number | null
           price_yearly?: number | null
@@ -376,6 +378,7 @@ export type Database = {
           email?: string
           followers_count?: number | null
           id?: string
+          is_creator?: boolean | null
           name?: string
           price_monthly?: number | null
           price_yearly?: number | null

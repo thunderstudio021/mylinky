@@ -19,7 +19,7 @@ const Index = () => {
   useEffect(() => {
     const loadData = async () => {
       const { data: creatorsData } = await supabase
-        .from("profiles").select("*").eq("verified", true).order("followers_count", { ascending: false }).limit(10);
+        .from("profiles").select("*").eq("is_creator", true).order("followers_count", { ascending: false }).limit(10);
       setCreators(creatorsData || []);
 
       const { data: postsData } = await supabase

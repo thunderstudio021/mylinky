@@ -44,7 +44,7 @@ const Explore = () => {
       const { data } = await supabase
         .from("profiles")
         .select("id, name, username, avatar_url, bio, followers_count, price_monthly, verified")
-        .eq("verified", true)
+        .eq("is_creator", true)
         .order("followers_count", { ascending: false });
 
       setCreators((data as Creator[]) || []);
