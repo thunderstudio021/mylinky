@@ -67,7 +67,7 @@ const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
 
   const needsPostType = contentType === "photo" || contentType === "video";
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!text.trim() && !mediaFile && contentType !== "poll") {
       toast.error("Adicione conteúdo à sua publicação");
       return;
