@@ -25,31 +25,34 @@ const CreatorDashboard = () => {
   const loadFinancials = useCallback(async () => {
     if (!user) return;
 
-    const [subsRes, giftsRes, ppvRes, profileRes, withdrawRes] = await Promise.all([
-      supabase.from("subscriptions").select("amount").eq("creator_id", user.id),
-      supabase.from("gifts").select("amount").eq("creator_id", user.id),
-      // PPV: need to get posts by this creator, then purchases for those posts
+    const [subsRes, giftsRes, ppvPostsRes, profileRes, withdrawRes] = await Promise.all([
+      supabase.from("subscriptions").select("amount, created_at, plan, subscriber_id").eq("creator_id", user.id),
+      supabase.from("gifts").select("amount, created_at, sender_id").eq("creator_id", user.id),
       supabase.from("posts").select("id").eq("creator_id", user.id),
       supabase.from("profiles").select("commission_rate").eq("id", user.id).single(),
       supabase.from("withdrawal_requests").select("amount, status").eq("creator_id", user.id).eq("status", "approved"),
     ]);
 
-    const rate = Number(profileRes.data?.commission_rate ?? 20);
+    const rate = Number((profileRes.data as any)?.commission_rate ?? 20);
     setCommissionRate(rate);
 
-    const subTotal = (subsRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
-    const giftTotal = (giftsRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
+    const subs = subsRes.data || [];
+    const gifts = giftsRes.data || [];
 
-    // Get PPV purchases for this creator's posts
-    const postIds = (ppvRes.data || []).map(p => p.id);
-    let ppvTotal = 0;
+    const subTotal = subs.reduce((s, r) => s + Number(r.amount), 0);
+    const giftTotal = gifts.reduce((s, r) => s + Number(r.amount), 0);
+
+    // PPV purchases for this creator's posts
+    const postIds = (ppvPostsRes.data || []).map(p => p.id);
+    let ppvPurchases: any[] = [];
     if (postIds.length > 0) {
-      const { data: purchases } = await supabase
+      const { data } = await supabase
         .from("ppv_purchases")
-        .select("amount")
+        .select("amount, created_at, buyer_id")
         .in("post_id", postIds);
-      ppvTotal = (purchases || []).reduce((s, r) => s + Number(r.amount), 0);
+      ppvPurchases = data || [];
     }
+    const ppvTotal = ppvPurchases.reduce((s, r) => s + Number(r.amount), 0);
 
     const bruto = subTotal + giftTotal + ppvTotal;
     const liquido = bruto * (1 - rate / 100);
@@ -58,6 +61,14 @@ const CreatorDashboard = () => {
     setRevenueBruto(bruto);
     setRevenueLiquido(liquido);
     setTotalWithdrawn(withdrawn);
+
+    // Build transaction history
+    const allTx = [
+      ...subs.map(s => ({ type: "Assinatura" as const, amount: Number(s.amount), date: s.created_at, detail: s.plan === "yearly" ? "Plano anual" : "Plano mensal" })),
+      ...gifts.map(g => ({ type: "Presente" as const, amount: Number(g.amount), date: g.created_at, detail: "" })),
+      ...ppvPurchases.map(p => ({ type: "PPV" as const, amount: Number(p.amount), date: p.created_at, detail: "" })),
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setTransactions(allTx);
   }, [user]);
 
   const loadWithdrawals = useCallback(async () => {
