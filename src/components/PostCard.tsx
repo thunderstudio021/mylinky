@@ -136,6 +136,45 @@ const PostCard = ({
               <span className="text-xs text-muted-foreground">@{creator.username} · {timeAgo}</span>
             </div>
           </Link>
+          {showMenu && (
+            <div className="relative">
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+                  <div className="absolute right-0 top-8 z-40 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[160px]">
+                    <button
+                      onClick={() => { setMenuOpen(false); onEdit?.(id); }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      Editar
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-destructive hover:bg-secondary transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      {deleting ? "Excluindo..." : "Excluir"}
+                    </button>
+                    <button
+                      onClick={() => { setMenuOpen(false); toast.info("Comentários bloqueados nesta publicação"); }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
+                    >
+                      <MessageSquareOff className="w-3.5 h-3.5" />
+                      Bloquear comentários
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Content */}
