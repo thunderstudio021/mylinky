@@ -10,6 +10,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import CreatePostModal from "@/components/CreatePostModal";
 import NotificationPanel, { useUnreadNotifications } from "@/components/NotificationPanel";
+import logoImg from "@/assets/logo.png";
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -18,6 +19,9 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, logout, isAdmin, isCreator } = useAuth();
+
+  const isAuthPage = location.pathname === "/login" || location.pathname === "/register";
+  if (isAuthPage) return null;
 
   const notificationCount = useUnreadNotifications();
 
@@ -53,8 +57,8 @@ const Navbar = () => {
     <>
       {/* Desktop top bar */}
       <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 h-14 items-center justify-between px-6 bg-background/80 backdrop-blur-md border-b border-border">
-        <Link to="/" className="text-lg font-semibold tracking-tight text-foreground">
-          FanVault
+        <Link to="/" className="flex items-center">
+          <img src={logoImg} alt="Logo" className="h-7 invert" />
         </Link>
         <div className="flex items-center gap-1">
           {[
@@ -106,7 +110,7 @@ const Navbar = () => {
 
       {/* Mobile top */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 h-12 flex items-center justify-between px-4 bg-background/80 backdrop-blur-md border-b border-border">
-        <Link to="/" className="text-base font-semibold text-foreground">FanVault</Link>
+        <Link to="/" className="flex items-center"><img src={logoImg} alt="Logo" className="h-6 invert" /></Link>
         <div className="flex items-center gap-3">
           <NotificationBell className="text-muted-foreground hover:text-foreground transition-colors" />
           {!user && (
