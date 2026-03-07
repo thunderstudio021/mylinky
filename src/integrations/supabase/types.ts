@@ -177,7 +177,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      approve_creator: { Args: { application_id: string }; Returns: undefined }
+      approve_creator: { Args: { _application_id: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -185,6 +185,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      reject_creator: { Args: { _application_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
