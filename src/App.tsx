@@ -32,7 +32,7 @@ const AppRoutes = () => (
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/explore" element={<Explore />} />
-      <Route path="/creator/:username" element={<CreatorProfile />} />
+      <Route path="/@:username" element={<CreatorProfile />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/dashboard" element={<CreatorRoute><CreatorDashboard /></CreatorRoute>} />

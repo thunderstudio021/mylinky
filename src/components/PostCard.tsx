@@ -38,7 +38,7 @@ const PostCard = ({ creator, content, image, video, likes, comments, locked, typ
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4">
-          <Link to={`/creator/${creator.username}`} className="flex items-center gap-3 group">
+          <Link to={`/@${creator.username}`} className="flex items-center gap-3 group">
             <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold text-sm">
               {creator.name[0]}
             </div>
