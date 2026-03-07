@@ -109,11 +109,7 @@ const Navbar = () => {
         <Link to="/" className="text-base font-semibold text-foreground">FanVault</Link>
         <div className="flex items-center gap-3">
           <NotificationBell className="text-muted-foreground hover:text-foreground transition-colors" />
-          {user ? (
-            <button onClick={() => setMenuOpen(true)} className="text-foreground">
-              <Menu className="w-5 h-5" />
-            </button>
-          ) : (
+          {!user && (
             <Link to="/login" className="text-sm font-medium text-foreground">Entrar</Link>
           )}
         </div>
