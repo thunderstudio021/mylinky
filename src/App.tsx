@@ -15,6 +15,7 @@ import CreatorDashboard from "./pages/CreatorDashboard";
 import AdminPanel from "./pages/AdminPanel";
 import BecomeCreator from "./pages/BecomeCreator";
 import Settings from "./pages/Settings";
+import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
