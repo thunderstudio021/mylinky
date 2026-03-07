@@ -13,6 +13,7 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [subscriptions, setSubscriptions] = useState<Set<string>>(new Set());
   const [purchases, setPurchases] = useState<Set<string>>(new Set());
+  const [following, setFollowing] = useState<Set<string>>(new Set());
   const { user, isAdmin } = useAuth();
 
   useEffect(() => {
@@ -27,12 +28,14 @@ const Index = () => {
       setPosts(postsData || []);
 
       if (user) {
-        const [{ data: subsData }, { data: ppvData }] = await Promise.all([
+        const [{ data: subsData }, { data: ppvData }, { data: followData }] = await Promise.all([
           supabase.from("subscriptions").select("creator_id").eq("subscriber_id", user.id).eq("status", "active"),
           supabase.from("ppv_purchases").select("post_id").eq("buyer_id", user.id),
+          supabase.from("followers").select("creator_id").eq("follower_id", user.id),
         ]);
         setSubscriptions(new Set((subsData || []).map((s: any) => s.creator_id)));
         setPurchases(new Set((ppvData || []).map((p: any) => p.post_id)));
+        setFollowing(new Set((followData || []).map((f: any) => f.creator_id)));
       }
       setLoading(false);
     };
@@ -48,7 +51,9 @@ const Index = () => {
     return `${Math.floor(hours / 24)}d`;
   };
 
-  const filteredPosts = activeTab === "Seguindo" ? [] : posts.filter((p) => (p.profiles as any)?.verified);
+  const filteredPosts = activeTab === "Seguindo"
+    ? posts.filter((p) => following.has(p.creator_id))
+    : posts.filter((p) => (p.profiles as any)?.verified);
 
   return (
     <div className="min-h-screen bg-background pt-14 md:pt-[72px] pb-20 md:pb-8">
