@@ -370,10 +370,10 @@ const CreatorsTab = () => {
 
     const appMap = new Map((apps || []).map(a => [a.user_id, a]));
 
-    // Combine: show creators (verified) + pending applicants
+    // Combine: show creators (is_creator or verified) + pending applicants
     const allProfiles = profiles || [];
     const creatorsWithApps = allProfiles
-      .filter(p => p.verified || appMap.has(p.id))
+      .filter(p => (p as any).is_creator || p.verified || appMap.has(p.id))
       .map(p => ({
         ...p,
         application: appMap.get(p.id) || null,
