@@ -15,6 +15,7 @@ import CreatorDashboard from "./pages/CreatorDashboard";
 import AdminPanel from "./pages/AdminPanel";
 import BecomeCreator from "./pages/BecomeCreator";
 import Settings from "./pages/Settings";
+import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const AppRoutes = () => (
       <Route path="/become-creator" element={<AuthRoute><BecomeCreator /></AuthRoute>} />
       <Route path="/dashboard" element={<CreatorRoute><CreatorDashboard /></CreatorRoute>} />
       <Route path="/admin-panel" element={<AdminRoute><AdminPanel /></AdminRoute>} />
+      <Route path="/chat" element={<AuthRoute><Chat /></AuthRoute>} />
       <Route path="/settings" element={<AuthRoute><Settings /></AuthRoute>} />
       <Route path="/:username" element={<CreatorProfile />} />
       <Route path="*" element={<NotFound />} />
