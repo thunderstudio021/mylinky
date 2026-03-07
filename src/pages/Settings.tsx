@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Save, Loader2, Eye, EyeOff, Lock, DollarSign, User, MessageSquare } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Eye, EyeOff, Lock, DollarSign, User, MessageSquare, Link2, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +27,7 @@ const Settings = () => {
   const [category, setCategory] = useState("");
   const [welcomeMessage, setWelcomeMessage] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
+  const [usernameError, setUsernameError] = useState("");
 
   useEffect(() => {
     if (profile) {
@@ -66,9 +67,30 @@ const Settings = () => {
 
   const handleSaveProfile = async () => {
     if (!user) return;
+    const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9._]/g, "");
+    if (cleanUsername.length < 3) {
+      toast.error("Nome de usuário deve ter pelo menos 3 caracteres");
+      return;
+    }
+    // Check if username is taken (only if changed)
+    if (cleanUsername !== profile?.username) {
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", cleanUsername)
+        .neq("id", user.id)
+        .maybeSingle();
+      if (existing) {
+        setUsernameError("Este nome de usuário já está em uso");
+        toast.error("Nome de usuário já está em uso");
+        return;
+      }
+    }
     setSavingProfile(true);
+    setUsernameError("");
     const { error } = await supabase.from("profiles").update({
       name: name.trim(),
+      username: cleanUsername,
       bio: bio.trim(),
       category: category.trim(),
     }).eq("id", user.id);
@@ -134,8 +156,28 @@ const Settings = () => {
                 <input value={name} onChange={e => setName(e.target.value)} placeholder="Seu nome" className={inputClass} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Usuário</label>
-                <input value={username} disabled className={`${inputClass} opacity-60 cursor-not-allowed`} />
+                <label className="text-xs font-medium text-muted-foreground">Nome de usuário</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground shrink-0">@</span>
+                  <input
+                    value={username}
+                    onChange={e => {
+                      const val = e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, "");
+                      setUsername(val);
+                      setUsernameError("");
+                    }}
+                    placeholder="nomedeusuario"
+                    maxLength={30}
+                    className={`${inputClass} ${usernameError ? "ring-1 ring-destructive" : ""}`}
+                  />
+                </div>
+                {usernameError && <p className="text-xs text-destructive">{usernameError}</p>}
+                <div className="flex items-center gap-1.5 mt-1">
+                  <Link2 className="w-3 h-3 text-muted-foreground" />
+                  <p className="text-[10px] text-muted-foreground">
+                    Seu link: <span className="text-foreground font-medium">{window.location.origin}/{username || "..."}</span>
+                  </p>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">Email</label>
