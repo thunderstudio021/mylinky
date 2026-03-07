@@ -87,56 +87,148 @@ const AdminSidebar = ({
 
 // ─── Dashboard Tab ───
 const DashboardTab = () => {
-  const [stats, setStats] = useState({ users: 0, creators: 0, posts: 0, photos: 0, videos: 0 });
+  const [stats, setStats] = useState({
+    users: 0, creators: 0, posts: 0, photos: 0, videos: 0,
+    pendingApps: 0, pendingWithdrawals: 0, totalRevenue: 0,
+    subsActive: 0, giftsTotal: 0,
+  });
+  const [recentUsers, setRecentUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
-      const [profilesRes, creatorsRes, postsRes] = await Promise.all([
+      const [profilesRes, creatorsRes, postsRes, pendingAppsRes, pendingWithdrawalsRes, subsRes, giftsRes, recentRes] = await Promise.all([
         supabase.from("profiles").select("id", { count: "exact", head: true }),
         supabase.from("profiles").select("id", { count: "exact", head: true }).eq("verified", true),
         supabase.from("posts").select("id, media_type"),
+        supabase.from("creator_applications").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("withdrawal_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase.from("subscriptions").select("amount").eq("status", "active"),
+        supabase.from("gifts").select("amount"),
+        supabase.from("profiles").select("id, name, username, avatar_url, created_at, verified").order("created_at", { ascending: false }).limit(5),
       ]);
       const posts = postsRes.data || [];
+      const subs = subsRes.data || [];
+      const gifts = giftsRes.data || [];
+      const totalRevenue = subs.reduce((s, r) => s + Number(r.amount), 0) + gifts.reduce((s, r) => s + Number(r.amount), 0);
+
       setStats({
         users: profilesRes.count || 0,
         creators: creatorsRes.count || 0,
         posts: posts.length,
         photos: posts.filter(p => p.media_type === "image").length,
         videos: posts.filter(p => p.media_type === "video").length,
+        pendingApps: pendingAppsRes.count || 0,
+        pendingWithdrawals: pendingWithdrawalsRes.count || 0,
+        totalRevenue,
+        subsActive: subs.length,
+        giftsTotal: gifts.length,
       });
+      setRecentUsers(recentRes.data || []);
       setLoading(false);
     };
     load();
   }, []);
 
-  const cards = [
-    { label: "Usuários", value: stats.users, icon: Users, color: "text-blue-400" },
-    { label: "Criadores", value: stats.creators, icon: UserCheck, color: "text-emerald-400" },
-    { label: "Publicações", value: stats.posts, icon: FileText, color: "text-purple-400" },
-    { label: "Fotos", value: stats.photos, icon: Image, color: "text-amber-400" },
-    { label: "Vídeos", value: stats.videos, icon: Video, color: "text-rose-400" },
-  ];
-
   if (loading) return <LoadingState />;
 
   return (
-    <div>
-      <h2 className="text-lg font-semibold text-foreground mb-4">Dashboard</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        {cards.map((c) => (
-          <div key={c.label} className="bg-card border border-border rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <c.icon className={`w-4 h-4 ${c.color}`} />
-              <span className="text-xs text-muted-foreground">{c.label}</span>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Dashboard</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">Visão geral da plataforma</p>
+      </div>
+
+      {/* Primary metrics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <MetricCard label="Usuários" value={stats.users} icon={Users} />
+        <MetricCard label="Criadores" value={stats.creators} icon={UserCheck} />
+        <MetricCard label="Assinaturas ativas" value={stats.subsActive} icon={TrendingUp} />
+        <MetricCard label="Receita total" value={`R$ ${stats.totalRevenue.toFixed(2)}`} icon={Wallet} />
+      </div>
+
+      {/* Secondary metrics */}
+      <div className="grid grid-cols-3 lg:grid-cols-5 gap-3">
+        <MetricCardSmall label="Publicações" value={stats.posts} />
+        <MetricCardSmall label="Fotos" value={stats.photos} />
+        <MetricCardSmall label="Vídeos" value={stats.videos} />
+        <MetricCardSmall label="Presentes" value={stats.giftsTotal} />
+        <MetricCardSmall label="Seguidores" value="-" />
+      </div>
+
+      {/* Alerts */}
+      {(stats.pendingApps > 0 || stats.pendingWithdrawals > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {stats.pendingApps > 0 && (
+            <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                <UserCheck className="w-4 h-4 text-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">{stats.pendingApps} solicitação(ões) pendente(s)</p>
+                <p className="text-xs text-muted-foreground">Criadores aguardando aprovação</p>
+              </div>
             </div>
-            <p className="text-2xl font-bold text-foreground">{c.value}</p>
-          </div>
-        ))}
+          )}
+          {stats.pendingWithdrawals > 0 && (
+            <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                <Wallet className="w-4 h-4 text-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">{stats.pendingWithdrawals} saque(s) pendente(s)</p>
+                <p className="text-xs text-muted-foreground">Aguardando análise</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Recent users */}
+      <div>
+        <h3 className="text-sm font-medium text-foreground mb-3">Últimos cadastros</h3>
+        <div className="bg-card border border-border rounded-xl divide-y divide-border">
+          {recentUsers.map(u => (
+            <div key={u.id} className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-foreground text-xs font-semibold shrink-0 overflow-hidden">
+                  {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : u.name?.[0] || "U"}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm text-foreground truncate">{u.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">@{u.username}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {u.verified && <Shield className="w-3.5 h-3.5 text-foreground" />}
+                <span className="text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString("pt-BR")}</span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 };
+
+const MetricCard = ({ label, value, icon: Icon }: { label: string; value: string | number; icon: any }) => (
+  <div className="bg-card border border-border rounded-xl p-4 group">
+    <div className="flex items-center justify-between mb-3">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center">
+        <Icon className="w-3.5 h-3.5 text-foreground" />
+      </div>
+    </div>
+    <p className="text-2xl font-bold text-foreground tracking-tight">{value}</p>
+  </div>
+);
+
+const MetricCardSmall = ({ label, value }: { label: string; value: string | number }) => (
+  <div className="bg-card border border-border rounded-xl p-3 text-center">
+    <p className="text-lg font-semibold text-foreground">{value}</p>
+    <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
+  </div>
+);
 
 // ─── Creators Tab ───
 const CreatorsTab = () => {
