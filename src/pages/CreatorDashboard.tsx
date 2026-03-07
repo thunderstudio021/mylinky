@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { DollarSign, Users, TrendingUp, Wallet, ArrowUpRight, Send, Loader2, Clock, X as XIcon } from "lucide-react";
+import { DollarSign, Users, TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Send, Loader2, Clock, X as XIcon, Gift } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -20,35 +20,39 @@ const CreatorDashboard = () => {
   const [revenueLiquido, setRevenueLiquido] = useState(0);
   const [commissionRate, setCommissionRate] = useState(20);
   const [totalWithdrawn, setTotalWithdrawn] = useState(0);
+  const [transactions, setTransactions] = useState<any[]>([]);
 
   const loadFinancials = useCallback(async () => {
     if (!user) return;
 
-    const [subsRes, giftsRes, ppvRes, profileRes, withdrawRes] = await Promise.all([
-      supabase.from("subscriptions").select("amount").eq("creator_id", user.id),
-      supabase.from("gifts").select("amount").eq("creator_id", user.id),
-      // PPV: need to get posts by this creator, then purchases for those posts
+    const [subsRes, giftsRes, ppvPostsRes, profileRes, withdrawRes] = await Promise.all([
+      supabase.from("subscriptions").select("amount, created_at, plan, subscriber_id").eq("creator_id", user.id),
+      supabase.from("gifts").select("amount, created_at, sender_id").eq("creator_id", user.id),
       supabase.from("posts").select("id").eq("creator_id", user.id),
       supabase.from("profiles").select("commission_rate").eq("id", user.id).single(),
       supabase.from("withdrawal_requests").select("amount, status").eq("creator_id", user.id).eq("status", "approved"),
     ]);
 
-    const rate = Number(profileRes.data?.commission_rate ?? 20);
+    const rate = Number((profileRes.data as any)?.commission_rate ?? 20);
     setCommissionRate(rate);
 
-    const subTotal = (subsRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
-    const giftTotal = (giftsRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
+    const subs = subsRes.data || [];
+    const gifts = giftsRes.data || [];
 
-    // Get PPV purchases for this creator's posts
-    const postIds = (ppvRes.data || []).map(p => p.id);
-    let ppvTotal = 0;
+    const subTotal = subs.reduce((s, r) => s + Number(r.amount), 0);
+    const giftTotal = gifts.reduce((s, r) => s + Number(r.amount), 0);
+
+    // PPV purchases for this creator's posts
+    const postIds = (ppvPostsRes.data || []).map(p => p.id);
+    let ppvPurchases: any[] = [];
     if (postIds.length > 0) {
-      const { data: purchases } = await supabase
+      const { data } = await supabase
         .from("ppv_purchases")
-        .select("amount")
+        .select("amount, created_at, buyer_id")
         .in("post_id", postIds);
-      ppvTotal = (purchases || []).reduce((s, r) => s + Number(r.amount), 0);
+      ppvPurchases = data || [];
     }
+    const ppvTotal = ppvPurchases.reduce((s, r) => s + Number(r.amount), 0);
 
     const bruto = subTotal + giftTotal + ppvTotal;
     const liquido = bruto * (1 - rate / 100);
@@ -57,6 +61,14 @@ const CreatorDashboard = () => {
     setRevenueBruto(bruto);
     setRevenueLiquido(liquido);
     setTotalWithdrawn(withdrawn);
+
+    // Build transaction history
+    const allTx = [
+      ...subs.map(s => ({ type: "Assinatura" as const, amount: Number(s.amount), date: s.created_at, detail: s.plan === "yearly" ? "Plano anual" : "Plano mensal" })),
+      ...gifts.map(g => ({ type: "Presente" as const, amount: Number(g.amount), date: g.created_at, detail: "" })),
+      ...ppvPurchases.map(p => ({ type: "PPV" as const, amount: Number(p.amount), date: p.created_at, detail: "" })),
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setTransactions(allTx);
   }, [user]);
 
   const loadWithdrawals = useCallback(async () => {
@@ -194,6 +206,32 @@ const CreatorDashboard = () => {
             <p className="text-lg font-semibold text-foreground">{profile?.subscribers_count || 0}</p>
           </div>
         </div>
+
+        {/* Transaction history */}
+        {transactions.length > 0 && (
+          <div className="bg-card border border-border rounded-lg p-5 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <ArrowDownRight className="w-4 h-4 text-muted-foreground" />
+              <h3 className="text-sm font-medium text-foreground">Histórico de vendas</h3>
+            </div>
+            <div className="space-y-1">
+              {transactions.map((tx, i) => (
+                <div key={i} className="flex items-center justify-between py-3 border-b border-border last:border-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
+                      {tx.type === "Presente" ? <Gift className="w-3.5 h-3.5 text-foreground" /> : <DollarSign className="w-3.5 h-3.5 text-foreground" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{tx.type}{tx.detail ? ` · ${tx.detail}` : ""}</p>
+                      <p className="text-[11px] text-muted-foreground">{new Date(tx.date).toLocaleDateString("pt-BR")} · Líquido: R$ {fmt(tx.amount * (1 - commissionRate / 100))}</p>
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium text-foreground">R$ {fmt(tx.amount)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Withdraw button */}
         <button
