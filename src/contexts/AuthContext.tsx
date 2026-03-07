@@ -25,7 +25,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isCreator: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  signup: (email: string, password: string, name: string, username: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (email: string, password: string, name: string, username: string, whatsapp?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -113,12 +113,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return !error;
   };
 
-  const signup = async (email: string, password: string, name: string, username: string) => {
+  const signup = async (email: string, password: string, name: string, username: string, whatsapp?: string) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { name, username },
+        data: { name, username, whatsapp: whatsapp || "" },
         emailRedirectTo: window.location.origin,
       },
     });
