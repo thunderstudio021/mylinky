@@ -284,7 +284,32 @@ const CreatorDashboard = () => {
           </div>
         </div>
 
-        {/* Transaction history (filtered) */}
+        {/* PIX vs Card breakdown */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="flex items-center gap-1.5 mb-2">
+              <QrCode className="w-3.5 h-3.5 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">Vendas via PIX</p>
+            </div>
+            <p className="text-base font-semibold text-foreground">R$ {fmt(period === "all" ? pixBruto : filteredPixBruto)}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Líquido: R$ {fmt((period === "all" ? pixBruto : filteredPixBruto) * (1 - commissionRate / 100))}</p>
+            <span className="inline-block mt-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full bg-green-500/10 text-green-500">Disponível imediatamente</span>
+          </div>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="flex items-center gap-1.5 mb-2">
+              <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">Vendas via Cartão</p>
+            </div>
+            <p className="text-base font-semibold text-foreground">R$ {fmt(period === "all" ? cardBruto : filteredCardBruto)}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Líquido: R$ {fmt((period === "all" ? cardBruto : filteredCardBruto) * (1 - commissionRate / 100))}</p>
+            <span className="inline-block mt-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-500">Disponível em D+14</span>
+            {cardLocked > 0 && period === "all" && (
+              <p className="text-[11px] text-muted-foreground mt-1">🔒 R$ {fmt(cardLiquidoLocked)} aguardando liberação</p>
+            )}
+          </div>
+        </div>
+
+
         {filteredTransactions.length > 0 && (
           <div className="bg-card border border-border rounded-lg p-5 mb-6">
             <div className="flex items-center gap-2 mb-4">
