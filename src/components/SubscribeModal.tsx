@@ -105,17 +105,23 @@ const SubscribeModal = ({ open, onClose, creatorName, priceMonthly, priceYearly,
                   </div>
                 </div>
 
-                <button
-                  onClick={handleConfirm}
-                  disabled={processing || price <= 0}
-                  className="w-full py-3 text-sm font-medium bg-foreground text-background rounded-lg hover:bg-foreground/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {processing ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Processando...</>
-                  ) : (
-                    <>Assinar por R${Number(price).toFixed(2)}</>
-                  )}
-                </button>
+                {price > 0 ? (
+                  <button
+                    onClick={handleConfirm}
+                    disabled={processing}
+                    className="w-full py-3 text-sm font-medium bg-foreground text-background rounded-lg hover:bg-foreground/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {processing ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Processando...</>
+                    ) : (
+                      <>Assinar por R${Number(price).toFixed(2)}</>
+                    )}
+                  </button>
+                ) : (
+                  <p className="text-center text-xs text-muted-foreground py-2">
+                    Este criador ainda não configurou os valores de assinatura.
+                  </p>
+                )}
               </div>
             )}
           </motion.div>
