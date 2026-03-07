@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Save, Loader2, Eye, EyeOff, Lock, DollarSign, User } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Eye, EyeOff, Lock, DollarSign, User, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +25,7 @@ const Settings = () => {
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [category, setCategory] = useState("");
+  const [welcomeMessage, setWelcomeMessage] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
@@ -35,6 +36,12 @@ const Settings = () => {
       setUsername(profile.username || "");
       setBio(profile.bio || "");
       setCategory(profile.category || "");
+      // Fetch welcome_message directly since it may not be in Profile type
+      if (user) {
+        supabase.from("profiles").select("welcome_message").eq("id", user.id).single().then(({ data }) => {
+          setWelcomeMessage((data as any)?.welcome_message || "Seja muito bem-vindo(a)! Vamos conversar? 😏🔥");
+        });
+      }
       setLoading(false);
     }
   }, [profile]);
@@ -45,7 +52,8 @@ const Settings = () => {
     const { error } = await supabase.from("profiles").update({
       price_monthly: parseFloat(priceMonthly) || 0,
       price_yearly: parseFloat(priceYearly) || 0,
-    }).eq("id", user.id);
+      welcome_message: welcomeMessage.trim() || "Seja muito bem-vindo(a)! Vamos conversar? 😏🔥",
+    } as any).eq("id", user.id);
 
     if (error) {
       toast.error("Erro ao salvar");
@@ -177,6 +185,22 @@ const Settings = () => {
                     </p>
                   )}
                 </div>
+              </div>
+
+              {/* Welcome message */}
+              <div className="bg-secondary/50 border border-border rounded-lg p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
+                  <label className="text-xs font-medium text-foreground">Mensagem automática de boas-vindas</label>
+                </div>
+                <p className="text-[10px] text-muted-foreground">Enviada automaticamente quando alguém assina seu conteúdo</p>
+                <textarea
+                  value={welcomeMessage}
+                  onChange={e => setWelcomeMessage(e.target.value)}
+                  placeholder="Seja muito bem-vindo(a)! Vamos conversar? 😏🔥"
+                  rows={3}
+                  className={`${inputClass} resize-none`}
+                />
               </div>
 
               <button
