@@ -20,6 +20,8 @@ const Navbar = () => {
   const navigate = useNavigate();
   const { user, profile, logout, isAdmin, isCreator } = useAuth();
 
+  const notificationCount = useUnreadNotifications();
+
   const isAuthPage = location.pathname === "/login" || location.pathname === "/register";
   if (isAuthPage) return null;
 
