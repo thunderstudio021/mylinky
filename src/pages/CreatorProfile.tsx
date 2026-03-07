@@ -167,7 +167,7 @@ const CreatorProfile = () => {
       <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFileSelect(e, "cover")} />
 
       {/* Cover */}
-      <div className="relative h-40 md:h-56 bg-secondary group">
+      <div className="relative bg-secondary group" style={{ aspectRatio: "16/5" }}>
         {creator.cover_url ? (
           <img src={creator.cover_url} alt="Capa" className="w-full h-full object-cover" />
         ) : (
