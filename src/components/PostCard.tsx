@@ -99,9 +99,24 @@ const PostCard = ({
 
   const handleGiftConfirm = async (amount: number) => {
     if (!currentUserId) return;
-    // We don't have creatorId in simplified props, but gift still works
     toast.success("Presente enviado!");
   };
+
+  const handleDelete = async () => {
+    if (!confirm("Tem certeza que deseja excluir esta publicação?")) return;
+    setDeleting(true);
+    setMenuOpen(false);
+    const { error } = await supabase.from("posts").delete().eq("id", String(id));
+    if (error) {
+      toast.error("Erro ao excluir publicação");
+    } else {
+      toast.success("Publicação excluída!");
+      onDelete?.(id);
+    }
+    setDeleting(false);
+  };
+
+  const showMenu = isOwner || isAdmin;
 
   return (
     <>
