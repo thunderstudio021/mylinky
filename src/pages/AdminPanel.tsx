@@ -98,91 +98,95 @@ const DashboardTab = () => {
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const load = async () => {
-      const [profilesRes, creatorsRes, postsRes, pendingAppsRes, pendingWithdrawalsRes, subsRes, giftsRes, ppvRes, recentRes, followersRes] = await Promise.all([
-        supabase.from("profiles").select("id", { count: "exact", head: true }),
-        supabase.from("profiles").select("id, commission_rate", { count: "exact" }).eq("verified", true),
-        supabase.from("posts").select("id, media_type"),
-        supabase.from("creator_applications").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("withdrawal_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("subscriptions").select("amount, creator_id, status, created_at"),
-        supabase.from("gifts").select("amount, creator_id, created_at"),
-        supabase.from("ppv_purchases").select("amount, post_id, created_at"),
-        supabase.from("profiles").select("id, name, username, avatar_url, created_at, verified").order("created_at", { ascending: false }).limit(5),
-        supabase.from("followers").select("id", { count: "exact", head: true }),
-      ]);
+  const loadStats = useCallback(async () => {
+    const [profilesRes, creatorsRes, postsRes, pendingAppsRes, pendingWithdrawalsRes, subsRes, giftsRes, ppvRes, recentRes, followersRes] = await Promise.all([
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase.from("profiles").select("id, commission_rate", { count: "exact" }).eq("verified", true),
+      supabase.from("posts").select("id, media_type"),
+      supabase.from("creator_applications").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("withdrawal_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("subscriptions").select("amount, creator_id, status, created_at"),
+      supabase.from("gifts").select("amount, creator_id, created_at"),
+      supabase.from("ppv_purchases").select("amount, post_id, created_at"),
+      supabase.from("profiles").select("id, name, username, avatar_url, created_at, verified").order("created_at", { ascending: false }).limit(5),
+      supabase.from("followers").select("id", { count: "exact", head: true }),
+    ]);
 
-      const posts = postsRes.data || [];
-      const allSubs = subsRes.data || [];
-      const activeSubs = allSubs.filter(s => s.status === "active");
-      const gifts = giftsRes.data || [];
-      const ppvs = ppvRes.data || [];
-      const creators = creatorsRes.data || [];
+    const posts = postsRes.data || [];
+    const allSubs = subsRes.data || [];
+    const activeSubs = allSubs.filter(s => s.status === "active");
+    const gifts = giftsRes.data || [];
+    const ppvs = ppvRes.data || [];
+    const creators = creatorsRes.data || [];
 
-      // Build commission map: creator_id -> rate (default 20)
-      const commissionMap = new Map<string, number>();
-      creators.forEach((c: any) => commissionMap.set(c.id, Number(c.commission_rate ?? 20)));
+    const commissionMap = new Map<string, number>();
+    creators.forEach((c: any) => commissionMap.set(c.id, Number(c.commission_rate ?? 20)));
 
-      // Calculate bruto (all revenue)
-      const subRevenue = allSubs.reduce((s, r) => s + Number(r.amount), 0);
-      const giftRevenue = gifts.reduce((s, r) => s + Number(r.amount), 0);
-      const ppvRevenue = ppvs.reduce((s, r) => s + Number(r.amount), 0);
-      const revenueBruto = subRevenue + giftRevenue + ppvRevenue;
+    const subRevenue = allSubs.reduce((s, r) => s + Number(r.amount), 0);
+    const giftRevenue = gifts.reduce((s, r) => s + Number(r.amount), 0);
+    const ppvRevenue = ppvs.reduce((s, r) => s + Number(r.amount), 0);
+    const revenueBruto = subRevenue + giftRevenue + ppvRevenue;
 
-      // Calculate platform net: sum of (amount * commission_rate/100) per transaction
-      const calcPlatformCut = (items: any[], creatorKey: string) =>
-        items.reduce((sum, item) => {
-          const rate = commissionMap.get(item[creatorKey]) ?? 20;
-          return sum + Number(item.amount) * (rate / 100);
-        }, 0);
+    const calcPlatformCut = (items: any[], creatorKey: string) =>
+      items.reduce((sum, item) => {
+        const rate = commissionMap.get(item[creatorKey]) ?? 20;
+        return sum + Number(item.amount) * (rate / 100);
+      }, 0);
 
-      const revenueLiquido =
-        calcPlatformCut(allSubs, "creator_id") +
-        calcPlatformCut(gifts, "creator_id");
-      // PPV doesn't have creator_id directly, so use flat 20% for now
-      const ppvPlatformCut = ppvRevenue * 0.20;
+    const revenueLiquido =
+      calcPlatformCut(allSubs, "creator_id") +
+      calcPlatformCut(gifts, "creator_id") +
+      ppvRevenue * 0.20;
 
-      setStats({
-        users: profilesRes.count || 0,
-        creators: creatorsRes.count || 0,
-        posts: posts.length,
-        photos: posts.filter(p => p.media_type === "image" || p.media_type === "photo").length,
-        videos: posts.filter(p => p.media_type === "video").length,
-        pendingApps: pendingAppsRes.count || 0,
-        pendingWithdrawals: pendingWithdrawalsRes.count || 0,
-        totalSubscribers: activeSubs.length,
-        revenueBruto,
-        revenueLiquido: revenueLiquido + ppvPlatformCut,
-        giftsTotal: gifts.length,
-        followersTotal: followersRes.count || 0,
-      });
+    setStats({
+      users: profilesRes.count || 0,
+      creators: creatorsRes.count || 0,
+      posts: posts.length,
+      photos: posts.filter(p => p.media_type === "image" || p.media_type === "photo").length,
+      videos: posts.filter(p => p.media_type === "video").length,
+      pendingApps: pendingAppsRes.count || 0,
+      pendingWithdrawals: pendingWithdrawalsRes.count || 0,
+      totalSubscribers: activeSubs.length,
+      revenueBruto,
+      revenueLiquido,
+      giftsTotal: gifts.length,
+      followersTotal: followersRes.count || 0,
+    });
 
-      // Build monthly revenue data (last 6 months)
-      const allTransactions = [
-        ...allSubs.map(s => ({ amount: Number(s.amount), created_at: (s as any).created_at })),
-        ...gifts.map(g => ({ amount: Number(g.amount), created_at: (g as any).created_at })),
-        ...ppvs.map(p => ({ amount: Number(p.amount), created_at: (p as any).created_at })),
-      ];
-      const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-      const now = new Date();
-      const months: { month: string; valor: number }[] = [];
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-        const label = `${monthNames[d.getMonth()]}`;
-        const total = allTransactions
-          .filter(t => t.created_at && t.created_at.startsWith(key))
-          .reduce((s, t) => s + t.amount, 0);
-        months.push({ month: label, valor: total });
-      }
-      setMonthlyData(months);
-
-      setRecentUsers(recentRes.data || []);
-      setLoading(false);
-    };
-    load();
+    // Monthly data
+    const allTransactions = [
+      ...allSubs.map(s => ({ amount: Number(s.amount), created_at: (s as any).created_at })),
+      ...gifts.map(g => ({ amount: Number(g.amount), created_at: (g as any).created_at })),
+      ...ppvs.map(p => ({ amount: Number(p.amount), created_at: (p as any).created_at })),
+    ];
+    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const now = new Date();
+    const months: { month: string; valor: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const total = allTransactions
+        .filter(t => t.created_at && t.created_at.startsWith(key))
+        .reduce((s, t) => s + t.amount, 0);
+      months.push({ month: monthNames[d.getMonth()], valor: total });
+    }
+    setMonthlyData(months);
+    setRecentUsers(recentRes.data || []);
+    setLoading(false);
   }, []);
+
+  useEffect(() => { loadStats(); }, [loadStats]);
+
+  // Realtime updates
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-dashboard-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "subscriptions" }, () => loadStats())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "gifts" }, () => loadStats())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "ppv_purchases" }, () => loadStats())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [loadStats]);
 
   if (loading) return <LoadingState />;
 
