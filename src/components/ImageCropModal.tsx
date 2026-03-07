@@ -124,13 +124,15 @@ const ImageCropModal = ({ open, imageUrl, aspectRatio, shape = "rect", onConfirm
     const sw = crop.w * scaleX;
     const sh = crop.h * scaleY;
 
-    // Output size
-    const outW = shape === "circle" ? 400 : Math.min(1200, Math.round(crop.w * 2));
-    const outH = shape === "circle" ? 400 : Math.round(outW / aspectRatio);
+    // Output size — high resolution
+    const outW = shape === "circle" ? 800 : Math.min(1920, Math.round(sw));
+    const outH = shape === "circle" ? 800 : Math.round(outW / aspectRatio);
 
     canvas.width = outW;
     canvas.height = outH;
     const ctx = canvas.getContext("2d")!;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
 
     if (shape === "circle") {
       ctx.beginPath();
@@ -144,7 +146,7 @@ const ImageCropModal = ({ open, imageUrl, aspectRatio, shape = "rect", onConfirm
     canvas.toBlob((blob) => {
       if (blob) onConfirm(blob);
       setSaving(false);
-    }, "image/jpeg", 0.92);
+    }, "image/jpeg", 0.95);
   };
 
   // Render image in the viewport
