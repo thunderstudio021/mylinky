@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
-import { Users, FileText, Heart, Crown, UserPlus, Share2, BadgeCheck, UserCheck, Camera, Pencil, Check, X } from "lucide-react";
+import { Users, FileText, Heart, Crown, UserPlus, BadgeCheck, UserCheck, Camera, Pencil, Check, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import PostCard from "@/components/PostCard";
@@ -285,37 +285,32 @@ const CreatorProfile = () => {
 
             {/* Actions */}
             {!isOwnProfile && creator.verified && user && (
-              <div className="flex gap-3 mt-4 flex-wrap justify-center">
+              <div className="flex gap-2 mt-4 justify-center">
                 <button
                   onClick={handleFollow}
                   disabled={followLoading}
-                  className={`flex items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                  className={`px-5 py-2 text-sm font-medium rounded-full transition-all ${
                     isFollowing
                       ? "bg-secondary text-foreground border border-border hover:bg-secondary/80"
-                      : "bg-foreground text-background hover:bg-foreground/90"
+                      : "border border-foreground/20 text-foreground hover:bg-secondary"
                   }`}
                 >
-                  {isFollowing ? <UserCheck className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
                   {isFollowing ? "Seguindo" : "Seguir"}
                 </button>
 
                 {creator.price_monthly > 0 && (
                   <button
                     onClick={() => !isSubscribed && setSubscribeOpen(true)}
-                    className={`flex items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                    className={`flex items-center gap-1.5 px-5 py-2 text-sm font-medium rounded-full transition-all ${
                       isSubscribed
                         ? "bg-accent/10 text-accent border border-accent/20"
                         : "bg-foreground text-background hover:bg-foreground/90"
                     }`}
                   >
-                    <Crown className="w-4 h-4" />
-                    {isSubscribed ? "Assinante" : `Assinar R$${Number(creator.price_monthly).toFixed(2)}/mês`}
+                    <Crown className="w-3.5 h-3.5" />
+                    {isSubscribed ? "Assinante" : "Assinar"}
                   </button>
                 )}
-
-                <button className="p-2.5 border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                  <Share2 className="w-4.5 h-4.5" />
-                </button>
               </div>
             )}
           </div>
