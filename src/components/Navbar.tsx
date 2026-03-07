@@ -9,15 +9,17 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import CreatePostModal from "@/components/CreatePostModal";
+import NotificationPanel, { useUnreadNotifications } from "@/components/NotificationPanel";
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, logout, isAdmin, isCreator } = useAuth();
 
-  const notificationCount = 3; // mock
+  const notificationCount = useUnreadNotifications();
 
   const canCreate = isCreator || isAdmin;
   const bottomItems = [
