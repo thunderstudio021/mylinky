@@ -51,7 +51,9 @@ const Index = () => {
     return `${Math.floor(hours / 24)}d`;
   };
 
-  const filteredPosts = activeTab === "Seguindo" ? [] : posts.filter((p) => (p.profiles as any)?.verified);
+  const filteredPosts = activeTab === "Seguindo"
+    ? posts.filter((p) => following.has(p.creator_id))
+    : posts.filter((p) => (p.profiles as any)?.verified);
 
   return (
     <div className="min-h-screen bg-background pt-14 md:pt-[72px] pb-20 md:pb-8">
