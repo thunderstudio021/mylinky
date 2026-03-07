@@ -45,12 +45,19 @@ const CreatorDashboard = () => {
   const [totalPending, setTotalPending] = useState(0);
   const [transactions, setTransactions] = useState<any[]>([]);
 
+  const [pixBruto, setPixBruto] = useState(0);
+  const [cardBruto, setCardBruto] = useState(0);
+  const [cardAvailable, setCardAvailable] = useState(0);
+  const [cardLocked, setCardLocked] = useState(0);
+
+  const D14_MS = 14 * 24 * 60 * 60 * 1000;
+
   const loadFinancials = useCallback(async () => {
     if (!user) return;
 
     const [subsRes, giftsRes, ppvPostsRes, profileRes, withdrawApprovedRes, withdrawPendingRes] = await Promise.all([
-      supabase.from("subscriptions").select("amount, created_at, plan, subscriber_id").eq("creator_id", user.id),
-      supabase.from("gifts").select("amount, created_at, sender_id").eq("creator_id", user.id),
+      supabase.from("subscriptions").select("amount, created_at, plan, subscriber_id, payment_method").eq("creator_id", user.id),
+      supabase.from("gifts").select("amount, created_at, sender_id, payment_method").eq("creator_id", user.id),
       supabase.from("posts").select("id").eq("creator_id", user.id),
       supabase.from("profiles").select("commission_rate").eq("id", user.id).single(),
       supabase.from("withdrawal_requests").select("amount, status").eq("creator_id", user.id).eq("status", "approved"),
@@ -63,23 +70,36 @@ const CreatorDashboard = () => {
     const subs = subsRes.data || [];
     const gifts = giftsRes.data || [];
 
-    const subTotal = subs.reduce((s, r) => s + Number(r.amount), 0);
-    const giftTotal = gifts.reduce((s, r) => s + Number(r.amount), 0);
-
     // PPV purchases for this creator's posts
     const postIds = (ppvPostsRes.data || []).map(p => p.id);
     let ppvPurchases: any[] = [];
     if (postIds.length > 0) {
       const { data } = await supabase
         .from("ppv_purchases")
-        .select("amount, created_at, buyer_id")
+        .select("amount, created_at, buyer_id, payment_method")
         .in("post_id", postIds);
       ppvPurchases = data || [];
     }
-    const ppvTotal = ppvPurchases.reduce((s, r) => s + Number(r.amount), 0);
 
-    const bruto = subTotal + giftTotal + ppvTotal;
+    // Build all transactions with payment_method
+    const allTx = [
+      ...subs.map(s => ({ type: "Assinatura" as const, amount: Number(s.amount), date: s.created_at, detail: s.plan === "yearly" ? "Plano anual" : "Plano mensal", method: (s as any).payment_method || "pix" })),
+      ...gifts.map(g => ({ type: "Presente" as const, amount: Number(g.amount), date: g.created_at, detail: "", method: (g as any).payment_method || "pix" })),
+      ...ppvPurchases.map(p => ({ type: "PPV" as const, amount: Number(p.amount), date: p.created_at, detail: "", method: (p as any).payment_method || "pix" })),
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const bruto = allTx.reduce((s, tx) => s + tx.amount, 0);
     const liquido = bruto * (1 - rate / 100);
+
+    // PIX vs Card breakdown (bruto)
+    const pixB = allTx.filter(tx => tx.method === "pix").reduce((s, tx) => s + tx.amount, 0);
+    const cardB = allTx.filter(tx => tx.method === "credit_card").reduce((s, tx) => s + tx.amount, 0);
+
+    // Card D+14: only card transactions older than 14 days are available
+    const now = Date.now();
+    const cardAvail = allTx.filter(tx => tx.method === "credit_card" && (now - new Date(tx.date).getTime()) >= D14_MS).reduce((s, tx) => s + tx.amount, 0);
+    const cardLock = cardB - cardAvail;
+
     const withdrawn = (withdrawApprovedRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
     const pending = (withdrawPendingRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
 
@@ -87,13 +107,10 @@ const CreatorDashboard = () => {
     setRevenueLiquido(liquido);
     setTotalWithdrawn(withdrawn);
     setTotalPending(pending);
-
-    // Build transaction history
-    const allTx = [
-      ...subs.map(s => ({ type: "Assinatura" as const, amount: Number(s.amount), date: s.created_at, detail: s.plan === "yearly" ? "Plano anual" : "Plano mensal" })),
-      ...gifts.map(g => ({ type: "Presente" as const, amount: Number(g.amount), date: g.created_at, detail: "" })),
-      ...ppvPurchases.map(p => ({ type: "PPV" as const, amount: Number(p.amount), date: p.created_at, detail: "" })),
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setPixBruto(pixB);
+    setCardBruto(cardB);
+    setCardAvailable(cardAvail);
+    setCardLocked(cardLock);
     setTransactions(allTx);
   }, [user]);
 
