@@ -338,7 +338,7 @@ const CreatorProfile = () => {
               <PostCard
                 key={post.id}
                 id={post.id}
-                creator={{ name: creator.name, username: creator.username, verified: creator.verified }}
+                creator={{ name: creator.name, username: creator.username, verified: creator.verified, avatar_url: creator.avatar_url }}
                 content={post.content}
                 image={post.media_type === "photo" ? post.media_url : undefined}
                 video={post.media_type === "video" ? post.media_url : undefined}
@@ -357,6 +357,7 @@ const CreatorProfile = () => {
                 creatorPriceYearly={creator.price_yearly}
                 currentUserId={user?.id}
                 mediaType={post.media_type}
+                commentsEnabled={(post as any).comments_enabled !== false}
                 onDelete={(postId) => setPosts(posts.filter(p => p.id !== postId))}
                 onUnlocked={() => {
                   // Reload subscription state
