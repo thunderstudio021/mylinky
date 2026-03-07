@@ -28,18 +28,22 @@ interface PostCardProps {
   creatorPriceYearly?: number;
   currentUserId?: string;
   onUnlocked?: () => void;
+  onDelete?: (postId: string | number) => void;
+  onEdit?: (postId: string | number) => void;
   mediaType?: string;
 }
 
 const PostCard = ({
   id, creator, content, image, video, likes, comments, timeAgo,
-  isOwner, currentUserId, mediaType,
+  isOwner, isAdmin, currentUserId, mediaType, onDelete, onEdit,
 }: PostCardProps) => {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(likes);
   const [fullscreen, setFullscreen] = useState(false);
   const [videoPlaying, setVideoPlaying] = useState(false);
   const [giftOpen, setGiftOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Poll state
   const [pollData, setPollData] = useState<{ id: string; options: { id: string; text: string; votes_count: number }[] } | null>(null);
