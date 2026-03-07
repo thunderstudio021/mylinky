@@ -129,7 +129,6 @@ const CreatorProfile = () => {
     }
     setUploading(false);
   };
-  };
 
   const saveName = async () => {
     if (!creator || !nameValue.trim()) return;
