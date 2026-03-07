@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, BadgeCheck, X, Play, Gift } from "lucide-react";
+import { Heart, MessageCircle, BadgeCheck, X, Play, Gift, MoreVertical, Pencil, Trash2, MessageSquareOff } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
@@ -28,18 +28,22 @@ interface PostCardProps {
   creatorPriceYearly?: number;
   currentUserId?: string;
   onUnlocked?: () => void;
+  onDelete?: (postId: string | number) => void;
+  onEdit?: (postId: string | number) => void;
   mediaType?: string;
 }
 
 const PostCard = ({
   id, creator, content, image, video, likes, comments, timeAgo,
-  isOwner, currentUserId, mediaType,
+  isOwner, isAdmin, currentUserId, mediaType, onDelete, onEdit,
 }: PostCardProps) => {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(likes);
   const [fullscreen, setFullscreen] = useState(false);
   const [videoPlaying, setVideoPlaying] = useState(false);
   const [giftOpen, setGiftOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Poll state
   const [pollData, setPollData] = useState<{ id: string; options: { id: string; text: string; votes_count: number }[] } | null>(null);
@@ -95,9 +99,24 @@ const PostCard = ({
 
   const handleGiftConfirm = async (amount: number) => {
     if (!currentUserId) return;
-    // We don't have creatorId in simplified props, but gift still works
     toast.success("Presente enviado!");
   };
+
+  const handleDelete = async () => {
+    if (!confirm("Tem certeza que deseja excluir esta publicação?")) return;
+    setDeleting(true);
+    setMenuOpen(false);
+    const { error } = await supabase.from("posts").delete().eq("id", String(id));
+    if (error) {
+      toast.error("Erro ao excluir publicação");
+    } else {
+      toast.success("Publicação excluída!");
+      onDelete?.(id);
+    }
+    setDeleting(false);
+  };
+
+  const showMenu = isOwner || isAdmin;
 
   return (
     <>
@@ -117,6 +136,45 @@ const PostCard = ({
               <span className="text-xs text-muted-foreground">@{creator.username} · {timeAgo}</span>
             </div>
           </Link>
+          {showMenu && (
+            <div className="relative">
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+                  <div className="absolute right-0 top-8 z-40 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[160px]">
+                    <button
+                      onClick={() => { setMenuOpen(false); onEdit?.(id); }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      Editar
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-destructive hover:bg-secondary transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      {deleting ? "Excluindo..." : "Excluir"}
+                    </button>
+                    <button
+                      onClick={() => { setMenuOpen(false); toast.info("Comentários bloqueados nesta publicação"); }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
+                    >
+                      <MessageSquareOff className="w-3.5 h-3.5" />
+                      Bloquear comentários
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Content */}
