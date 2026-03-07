@@ -14,16 +14,180 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      creator_applications: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          document_back_url: string | null
+          document_front_url: string | null
+          id: string
+          reviewed_at: string | null
+          selfie_url: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          document_back_url?: string | null
+          document_front_url?: string | null
+          id?: string
+          reviewed_at?: string | null
+          selfie_url?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          document_back_url?: string | null
+          document_front_url?: string | null
+          id?: string
+          reviewed_at?: string | null
+          selfie_url?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      posts: {
+        Row: {
+          comments_count: number | null
+          content: string
+          created_at: string
+          creator_id: string
+          id: string
+          likes_count: number | null
+          media_type: string | null
+          media_url: string | null
+          post_visibility: string
+          ppv_price: number | null
+        }
+        Insert: {
+          comments_count?: number | null
+          content?: string
+          created_at?: string
+          creator_id: string
+          id?: string
+          likes_count?: number | null
+          media_type?: string | null
+          media_url?: string | null
+          post_visibility?: string
+          ppv_price?: number | null
+        }
+        Update: {
+          comments_count?: number | null
+          content?: string
+          created_at?: string
+          creator_id?: string
+          id?: string
+          likes_count?: number | null
+          media_type?: string | null
+          media_url?: string | null
+          post_visibility?: string
+          ppv_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          category: string | null
+          cover_url: string | null
+          created_at: string
+          email: string
+          followers_count: number | null
+          id: string
+          name: string
+          price_monthly: number | null
+          price_yearly: number | null
+          subscribers_count: number | null
+          updated_at: string
+          username: string
+          verified: boolean | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          category?: string | null
+          cover_url?: string | null
+          created_at?: string
+          email: string
+          followers_count?: number | null
+          id: string
+          name: string
+          price_monthly?: number | null
+          price_yearly?: number | null
+          subscribers_count?: number | null
+          updated_at?: string
+          username: string
+          verified?: boolean | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          category?: string | null
+          cover_url?: string | null
+          created_at?: string
+          email?: string
+          followers_count?: number | null
+          id?: string
+          name?: string
+          price_monthly?: number | null
+          price_yearly?: number | null
+          subscribers_count?: number | null
+          updated_at?: string
+          username?: string
+          verified?: boolean | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      approve_creator: { Args: { application_id: string }; Returns: undefined }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +314,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
