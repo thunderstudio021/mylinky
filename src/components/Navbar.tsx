@@ -204,17 +204,41 @@ const Navbar = () => {
             </div>
 
             <div className="px-4 py-4 space-y-1">
+              {/* User profile header */}
+              {user && (
+                <>
+                  <button
+                    onClick={() => { navigate(`/${user.username}`); setMenuOpen(false); }}
+                    className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-secondary transition-colors mb-1"
+                  >
+                    <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center text-foreground text-lg font-semibold shrink-0">
+                      {user.avatar ? (
+                        <img src={user.avatar} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        user.name[0]
+                      )}
+                    </div>
+                    <div className="text-left min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{user.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">@{user.username}</p>
+                    </div>
+                  </button>
+                  <div className="border-t border-border my-3" />
+                </>
+              )}
+
               <MenuItem icon={Home} label="Início" onClick={() => { navigate("/"); setMenuOpen(false); }} active={isActive("/")} />
               <MenuItem icon={MessageCircle} label="Chat" onClick={() => { navigate("/chat"); setMenuOpen(false); }} />
               <MenuItem icon={Compass} label="Descobrir" onClick={() => { navigate("/explore"); setMenuOpen(false); }} active={isActive("/explore")} />
               <MenuItem icon={Search} label="Pesquisar" onClick={() => { navigate("/search"); setMenuOpen(false); }} />
-              <MenuItem icon={UserPlus2} label="Seja um criador" onClick={() => { navigate("/become-creator"); setMenuOpen(false); }} />
+              {!isCreator && !isAdmin && user && (
+                <MenuItem icon={UserPlus2} label="Seja um criador" onClick={() => { navigate("/become-creator"); setMenuOpen(false); }} />
+              )}
 
               <div className="border-t border-border my-3" />
               <p className="text-xs font-semibold text-foreground px-3 py-2">Colaborações</p>
               <MenuItem icon={Link2} label="Indicação" onClick={() => { navigate("/referral"); setMenuOpen(false); }} />
               <MenuItem icon={Users2} label="Afiliações" onClick={() => { navigate("/affiliates"); setMenuOpen(false); }} />
-              <MenuItem icon={UserCheck} label="Produtores" onClick={() => { navigate("/producers"); setMenuOpen(false); }} />
 
               {isCreator && (
                 <>
