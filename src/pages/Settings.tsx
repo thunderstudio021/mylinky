@@ -52,7 +52,8 @@ const Settings = () => {
     const { error } = await supabase.from("profiles").update({
       price_monthly: parseFloat(priceMonthly) || 0,
       price_yearly: parseFloat(priceYearly) || 0,
-    }).eq("id", user.id);
+      welcome_message: welcomeMessage.trim() || "Seja muito bem-vindo(a)! Vamos conversar? 😏🔥",
+    } as any).eq("id", user.id);
 
     if (error) {
       toast.error("Erro ao salvar");
@@ -184,6 +185,22 @@ const Settings = () => {
                     </p>
                   )}
                 </div>
+              </div>
+
+              {/* Welcome message */}
+              <div className="bg-secondary/50 border border-border rounded-lg p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
+                  <label className="text-xs font-medium text-foreground">Mensagem automática de boas-vindas</label>
+                </div>
+                <p className="text-[10px] text-muted-foreground">Enviada automaticamente quando alguém assina seu conteúdo</p>
+                <textarea
+                  value={welcomeMessage}
+                  onChange={e => setWelcomeMessage(e.target.value)}
+                  placeholder="Seja muito bem-vindo(a)! Vamos conversar? 😏🔥"
+                  rows={3}
+                  className={`${inputClass} resize-none`}
+                />
               </div>
 
               <button
