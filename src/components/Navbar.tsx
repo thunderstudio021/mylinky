@@ -141,7 +141,7 @@ const Navbar = () => {
               </Link>
             );
           })}
-          <button onClick={() => setMenuOpen(true)} className="flex items-center justify-center p-2">
+          <button onClick={() => user ? setMenuOpen(true) : navigate("/login")} className="flex items-center justify-center p-2">
             <User className="w-5 h-5 text-muted-foreground" />
           </button>
         </div>
