@@ -35,23 +35,16 @@ const AdminPanel = () => {
     loadApplications();
   }, [tab]);
 
-  const handleApprove = async (appId: string, userId: string) => {
-    const { error: appError } = await supabase
-      .from("creator_applications")
-      .update({ status: "approved", reviewed_at: new Date().toISOString() })
-      .eq("id", appId);
-    if (appError) { toast.error("Erro ao aprovar"); return; }
-    await supabase.from("profiles").update({ verified: true }).eq("id", userId);
-    toast.success("Criador aprovado com sucesso!");
+  const handleApprove = async (appId: string) => {
+    const { error } = await supabase.rpc("approve_creator", { _application_id: appId });
+    if (error) { toast.error("Erro ao aprovar: " + error.message); return; }
+    toast.success("Criador aprovado com sucesso! Já pode publicar.");
     loadApplications();
   };
 
   const handleReject = async (appId: string) => {
-    const { error } = await supabase
-      .from("creator_applications")
-      .update({ status: "rejected", reviewed_at: new Date().toISOString() })
-      .eq("id", appId);
-    if (error) { toast.error("Erro ao rejeitar"); return; }
+    const { error } = await supabase.rpc("reject_creator", { _application_id: appId });
+    if (error) { toast.error("Erro ao rejeitar: " + error.message); return; }
     toast.success("Solicitação rejeitada");
     loadApplications();
   };
