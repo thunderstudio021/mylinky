@@ -39,11 +39,11 @@ const Navbar = () => {
 
 
   const NotificationBell = ({ className = "" }: { className?: string }) => (
-    <button className={`relative ${className}`}>
+    <button className={`relative ${className}`} onClick={() => user && setNotifOpen(true)}>
       <Bell className="w-5 h-5" />
       {notificationCount > 0 && (
         <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-destructive text-destructive-foreground text-[10px] font-semibold rounded-full">
-          +{Math.min(notificationCount, 9)}
+          {Math.min(notificationCount, 99)}
         </span>
       )}
     </button>
