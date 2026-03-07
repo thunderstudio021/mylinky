@@ -165,9 +165,9 @@ const PostCard = ({
                     </button>
                     <button
                       onClick={() => { setMenuOpen(false); toast.info("Comentários bloqueados nesta publicação"); }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-secondary transition-colors whitespace-nowrap"
                     >
-                      <MessageSquareOff className="w-3.5 h-3.5" />
+                      <MessageSquareOff className="w-3.5 h-3.5 shrink-0" />
                       Bloquear comentários
                     </button>
                   </div>
