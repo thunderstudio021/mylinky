@@ -1,9 +1,30 @@
-import { useState, useEffect, useCallback } from "react";
-import { DollarSign, Users, TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Send, Loader2, Clock, X as XIcon, Gift } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { DollarSign, Users, TrendingUp, Wallet, ArrowUpRight, ArrowDownRight, Send, Loader2, Clock, X as XIcon, Gift, Calendar } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
+
+type PeriodFilter = "all" | "today" | "week" | "month" | "year";
+
+const getStartDate = (period: PeriodFilter): Date | null => {
+  const now = new Date();
+  switch (period) {
+    case "today": {
+      const d = new Date(now); d.setHours(0, 0, 0, 0); return d;
+    }
+    case "week": {
+      const d = new Date(now); d.setDate(d.getDate() - 7); return d;
+    }
+    case "month": {
+      const d = new Date(now); d.setMonth(d.getMonth() - 1); return d;
+    }
+    case "year": {
+      const d = new Date(now); d.setFullYear(d.getFullYear() - 1); return d;
+    }
+    default: return null;
+  }
+};
 
 const CreatorDashboard = () => {
   const { user, profile } = useAuth();
@@ -15,22 +36,25 @@ const CreatorDashboard = () => {
   const [bankName, setBankName] = useState("");
   const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [period, setPeriod] = useState<PeriodFilter>("all");
 
   const [revenueBruto, setRevenueBruto] = useState(0);
   const [revenueLiquido, setRevenueLiquido] = useState(0);
   const [commissionRate, setCommissionRate] = useState(20);
   const [totalWithdrawn, setTotalWithdrawn] = useState(0);
+  const [totalPending, setTotalPending] = useState(0);
   const [transactions, setTransactions] = useState<any[]>([]);
 
   const loadFinancials = useCallback(async () => {
     if (!user) return;
 
-    const [subsRes, giftsRes, ppvPostsRes, profileRes, withdrawRes] = await Promise.all([
+    const [subsRes, giftsRes, ppvPostsRes, profileRes, withdrawApprovedRes, withdrawPendingRes] = await Promise.all([
       supabase.from("subscriptions").select("amount, created_at, plan, subscriber_id").eq("creator_id", user.id),
       supabase.from("gifts").select("amount, created_at, sender_id").eq("creator_id", user.id),
       supabase.from("posts").select("id").eq("creator_id", user.id),
       supabase.from("profiles").select("commission_rate").eq("id", user.id).single(),
       supabase.from("withdrawal_requests").select("amount, status").eq("creator_id", user.id).eq("status", "approved"),
+      supabase.from("withdrawal_requests").select("amount, status").eq("creator_id", user.id).eq("status", "pending"),
     ]);
 
     const rate = Number((profileRes.data as any)?.commission_rate ?? 20);
@@ -56,11 +80,13 @@ const CreatorDashboard = () => {
 
     const bruto = subTotal + giftTotal + ppvTotal;
     const liquido = bruto * (1 - rate / 100);
-    const withdrawn = (withdrawRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
+    const withdrawn = (withdrawApprovedRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
+    const pending = (withdrawPendingRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
 
     setRevenueBruto(bruto);
     setRevenueLiquido(liquido);
     setTotalWithdrawn(withdrawn);
+    setTotalPending(pending);
 
     // Build transaction history
     const allTx = [
@@ -89,27 +115,28 @@ const CreatorDashboard = () => {
     init();
   }, [loadFinancials, loadWithdrawals]);
 
-  // Realtime: listen for new subscriptions, gifts, ppv_purchases
   useEffect(() => {
     if (!user) return;
-
     const channel = supabase
       .channel("wallet-realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "subscriptions", filter: `creator_id=eq.${user.id}` }, () => {
-        loadFinancials();
-      })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "gifts", filter: `creator_id=eq.${user.id}` }, () => {
-        loadFinancials();
-      })
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "ppv_purchases" }, () => {
-        loadFinancials();
-      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "subscriptions", filter: `creator_id=eq.${user.id}` }, () => { loadFinancials(); })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "gifts", filter: `creator_id=eq.${user.id}` }, () => { loadFinancials(); })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "ppv_purchases" }, () => { loadFinancials(); })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [user, loadFinancials]);
 
-  const availableBalance = revenueLiquido - totalWithdrawn;
+  const availableBalance = revenueLiquido - totalWithdrawn - totalPending;
+
+  // Filtered transactions by period
+  const filteredTransactions = useMemo(() => {
+    const start = getStartDate(period);
+    if (!start) return transactions;
+    return transactions.filter(tx => new Date(tx.date) >= start);
+  }, [transactions, period]);
+
+  const filteredBruto = useMemo(() => filteredTransactions.reduce((s, tx) => s + tx.amount, 0), [filteredTransactions]);
+  const filteredLiquido = useMemo(() => filteredBruto * (1 - commissionRate / 100), [filteredBruto, commissionRate]);
 
   const handleWithdraw = async () => {
     const val = parseFloat(amount);
@@ -144,6 +171,7 @@ const CreatorDashboard = () => {
       setBankName("");
       setAmount("");
       loadWithdrawals();
+      loadFinancials();
     }
     setSubmitting(false);
   };
@@ -155,6 +183,14 @@ const CreatorDashboard = () => {
     if (s === "approved") return { text: "Aprovado", cls: "text-green-500 bg-green-500/10" };
     return { text: "Rejeitado", cls: "text-red-500 bg-red-500/10" };
   };
+
+  const periodLabels: { key: PeriodFilter; label: string }[] = [
+    { key: "all", label: "Tudo" },
+    { key: "today", label: "Hoje" },
+    { key: "week", label: "Semana" },
+    { key: "month", label: "Mês" },
+    { key: "year", label: "Ano" },
+  ];
 
   return (
     <div className="min-h-screen bg-background pt-14 md:pt-[72px] pb-20 md:pb-8">
@@ -176,27 +212,45 @@ const CreatorDashboard = () => {
           <div className="bg-card border border-border rounded-lg p-5">
             <div className="flex items-center gap-2 mb-3">
               <Clock className="w-4 h-4 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Saldo pendente</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Saque pendente</p>
             </div>
-            <p className="text-2xl font-bold text-muted-foreground">R$ {fmt(0)}</p>
+            <p className="text-2xl font-bold text-muted-foreground">R$ {fmt(totalPending)}</p>
           </div>
         </div>
 
-        {/* Revenue breakdown */}
+        {/* Period filter */}
+        <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
+          <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+          {periodLabels.map(p => (
+            <button
+              key={p.key}
+              onClick={() => setPeriod(p.key)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-colors ${
+                period === p.key
+                  ? "bg-foreground text-background"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Revenue breakdown (filtered) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           <div className="bg-card border border-border rounded-lg p-4">
             <div className="flex items-center gap-1.5 mb-1">
               <DollarSign className="w-3.5 h-3.5 text-muted-foreground" />
               <p className="text-xs text-muted-foreground">Venda bruta</p>
             </div>
-            <p className="text-lg font-semibold text-foreground">R$ {fmt(revenueBruto)}</p>
+            <p className="text-lg font-semibold text-foreground">R$ {fmt(period === "all" ? revenueBruto : filteredBruto)}</p>
           </div>
           <div className="bg-card border border-border rounded-lg p-4">
             <div className="flex items-center gap-1.5 mb-1">
               <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
               <p className="text-xs text-muted-foreground">Venda líquida ({100 - commissionRate}%)</p>
             </div>
-            <p className="text-lg font-semibold text-foreground">R$ {fmt(revenueLiquido)}</p>
+            <p className="text-lg font-semibold text-foreground">R$ {fmt(period === "all" ? revenueLiquido : filteredLiquido)}</p>
           </div>
           <div className="bg-card border border-border rounded-lg p-4">
             <div className="flex items-center gap-1.5 mb-1">
@@ -207,15 +261,16 @@ const CreatorDashboard = () => {
           </div>
         </div>
 
-        {/* Transaction history */}
-        {transactions.length > 0 && (
+        {/* Transaction history (filtered) */}
+        {filteredTransactions.length > 0 && (
           <div className="bg-card border border-border rounded-lg p-5 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <ArrowDownRight className="w-4 h-4 text-muted-foreground" />
               <h3 className="text-sm font-medium text-foreground">Histórico de vendas</h3>
+              {period !== "all" && <span className="text-[11px] text-muted-foreground">({filteredTransactions.length} vendas)</span>}
             </div>
             <div className="space-y-1">
-              {transactions.map((tx, i) => (
+              {filteredTransactions.map((tx, i) => (
                 <div key={i} className="flex items-center justify-between py-3 border-b border-border last:border-0">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
@@ -230,6 +285,12 @@ const CreatorDashboard = () => {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {filteredTransactions.length === 0 && period !== "all" && (
+          <div className="bg-card border border-border rounded-lg p-5 mb-6 text-center">
+            <p className="text-sm text-muted-foreground">Nenhuma venda neste período.</p>
           </div>
         )}
 
@@ -284,6 +345,10 @@ const CreatorDashboard = () => {
                 <button onClick={() => !submitting && setWithdrawOpen(false)} className="text-muted-foreground hover:text-foreground"><XIcon className="w-5 h-5" /></button>
               </div>
               <div className="p-5 space-y-4">
+                <div className="bg-secondary/50 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground">Saldo disponível para saque</p>
+                  <p className="text-lg font-bold text-foreground">R$ {fmt(Math.max(availableBalance, 0))}</p>
+                </div>
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Valor do saque (mínimo R$100,00)</label>
                   <input
