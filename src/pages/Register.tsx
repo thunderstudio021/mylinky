@@ -46,7 +46,7 @@ const Register = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <img src={logoImg} alt="Logo" className="h-10 mx-auto mb-2 invert" />
+          <img src={logoImg} alt="Logo" className="h-10 mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">Crie sua conta</p>
         </div>
 
