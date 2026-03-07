@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -93,6 +94,7 @@ const DashboardTab = () => {
     totalSubscribers: 0, revenueBruto: 0, revenueLiquido: 0,
     giftsTotal: 0, followersTotal: 0,
   });
+  const [monthlyData, setMonthlyData] = useState<{ month: string; valor: number }[]>([]);
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -104,9 +106,9 @@ const DashboardTab = () => {
         supabase.from("posts").select("id, media_type"),
         supabase.from("creator_applications").select("id", { count: "exact", head: true }).eq("status", "pending"),
         supabase.from("withdrawal_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("subscriptions").select("amount, creator_id, status"),
-        supabase.from("gifts").select("amount, creator_id"),
-        supabase.from("ppv_purchases").select("amount, post_id"),
+        supabase.from("subscriptions").select("amount, creator_id, status, created_at"),
+        supabase.from("gifts").select("amount, creator_id, created_at"),
+        supabase.from("ppv_purchases").select("amount, post_id, created_at"),
         supabase.from("profiles").select("id, name, username, avatar_url, created_at, verified").order("created_at", { ascending: false }).limit(5),
         supabase.from("followers").select("id", { count: "exact", head: true }),
       ]);
@@ -155,6 +157,27 @@ const DashboardTab = () => {
         giftsTotal: gifts.length,
         followersTotal: followersRes.count || 0,
       });
+
+      // Build monthly revenue data (last 6 months)
+      const allTransactions = [
+        ...allSubs.map(s => ({ amount: Number(s.amount), created_at: (s as any).created_at })),
+        ...gifts.map(g => ({ amount: Number(g.amount), created_at: (g as any).created_at })),
+        ...ppvs.map(p => ({ amount: Number(p.amount), created_at: (p as any).created_at })),
+      ];
+      const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+      const now = new Date();
+      const months: { month: string; valor: number }[] = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        const label = `${monthNames[d.getMonth()]}`;
+        const total = allTransactions
+          .filter(t => t.created_at && t.created_at.startsWith(key))
+          .reduce((s, t) => s + t.amount, 0);
+        months.push({ month: label, valor: total });
+      }
+      setMonthlyData(months);
+
       setRecentUsers(recentRes.data || []);
       setLoading(false);
     };
@@ -191,7 +214,47 @@ const DashboardTab = () => {
         </div>
       </div>
 
-      {/* Primary metrics */}
+      {/* Monthly revenue chart */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <h3 className="text-sm font-medium text-foreground mb-1">Vendas mensais</h3>
+        <p className="text-xs text-muted-foreground mb-4">Últimos 6 meses</p>
+        <div className="h-52">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(0, 0%, 92%)" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="hsl(0, 0%, 92%)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0, 0%, 12%)" vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(0, 0%, 48%)" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "hsl(0, 0%, 48%)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `R$${v}`} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(0, 0%, 6%)",
+                  border: "1px solid hsl(0, 0%, 12%)",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                  color: "hsl(0, 0%, 92%)",
+                }}
+                formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, "Vendas"]}
+                labelStyle={{ color: "hsl(0, 0%, 48%)" }}
+              />
+              <Area
+                type="monotone"
+                dataKey="valor"
+                stroke="hsl(0, 0%, 92%)"
+                strokeWidth={2}
+                fill="url(#revenueGradient)"
+                dot={{ r: 3, fill: "hsl(0, 0%, 92%)", strokeWidth: 0 }}
+                activeDot={{ r: 5, fill: "hsl(0, 0%, 92%)", strokeWidth: 0 }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <MetricCard label="Usuários" value={stats.users} icon={Users} />
         <MetricCard label="Criadores" value={stats.creators} icon={UserCheck} />
