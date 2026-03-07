@@ -14,6 +14,7 @@ export interface Profile {
   price_monthly: number;
   price_yearly: number;
   verified: boolean;
+  is_creator: boolean;
   followers_count: number;
   subscribers_count: number;
 }
