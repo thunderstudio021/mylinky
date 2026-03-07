@@ -1,44 +1,82 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Users, FileText, Heart, Gift, UserPlus, Lock, Share2, BadgeCheck } from "lucide-react";
+import { Users, FileText, Heart, Gift, UserPlus, Lock, Share2, BadgeCheck, UserCheck, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import PostCard from "@/components/PostCard";
+import SubscribeModal from "@/components/SubscribeModal";
+import GiftModal from "@/components/GiftModal";
+import { toast } from "sonner";
 import type { Profile } from "@/contexts/AuthContext";
 
 const CreatorProfile = () => {
   const { username } = useParams<{ username: string }>();
-  const { user, profile: myProfile } = useAuth();
+  const { user, profile: myProfile, isAdmin } = useAuth();
   const [creator, setCreator] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [purchasedPosts, setPurchasedPosts] = useState<Set<string>>(new Set());
+  const [subscribeOpen, setSubscribeOpen] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   const isOwnProfile = myProfile?.username === username;
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      // Fetch creator profile
       const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("username", username)
-        .single();
+        .from("profiles").select("*").eq("username", username).single();
 
       if (profileData) {
         setCreator(profileData as Profile);
-        // Fetch posts
         const { data: postsData } = await supabase
-          .from("posts")
-          .select("*")
-          .eq("creator_id", profileData.id)
-          .order("created_at", { ascending: false });
+          .from("posts").select("*").eq("creator_id", profileData.id).order("created_at", { ascending: false });
         setPosts(postsData || []);
+
+        // Check follow/subscribe status
+        if (user) {
+          const [{ data: followData }, { data: subData }, { data: ppvData }] = await Promise.all([
+            supabase.from("followers").select("id").eq("follower_id", user.id).eq("creator_id", profileData.id).maybeSingle(),
+            supabase.from("subscriptions").select("id").eq("subscriber_id", user.id).eq("creator_id", profileData.id).eq("status", "active").maybeSingle(),
+            supabase.from("ppv_purchases").select("post_id").eq("buyer_id", user.id),
+          ]);
+          setIsFollowing(!!followData);
+          setIsSubscribed(!!subData);
+          setPurchasedPosts(new Set((ppvData || []).map((p: any) => p.post_id)));
+        }
       }
       setLoading(false);
     };
     if (username) load();
-  }, [username]);
+  }, [username, user]);
+
+  const handleFollow = async () => {
+    if (!user || !creator) return;
+    setFollowLoading(true);
+    if (isFollowing) {
+      await supabase.from("followers").delete().eq("follower_id", user.id).eq("creator_id", creator.id);
+      setIsFollowing(false);
+      setCreator({ ...creator, followers_count: Math.max(0, creator.followers_count - 1) });
+    } else {
+      await supabase.from("followers").insert({ follower_id: user.id, creator_id: creator.id });
+      setIsFollowing(true);
+      setCreator({ ...creator, followers_count: creator.followers_count + 1 });
+    }
+    setFollowLoading(false);
+  };
+
+  const handleSubscribeConfirm = async (plan: "monthly" | "yearly") => {
+    if (!user || !creator) return;
+    const amount = plan === "monthly" ? creator.price_monthly : creator.price_yearly;
+    await supabase.from("subscriptions").insert({
+      subscriber_id: user.id, creator_id: creator.id, plan, amount,
+    });
+    setIsSubscribed(true);
+    setCreator({ ...creator, subscribers_count: creator.subscribers_count + 1 });
+    toast.success("Assinatura ativada!");
+  };
 
   const getTimeAgo = (date: string) => {
     const diff = Date.now() - new Date(date).getTime();
@@ -46,25 +84,11 @@ const CreatorProfile = () => {
     if (mins < 60) return `${mins}m`;
     const hours = Math.floor(mins / 60);
     if (hours < 24) return `${hours}h`;
-    const days = Math.floor(hours / 24);
-    return `${days}d`;
+    return `${Math.floor(hours / 24)}d`;
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background pt-14 md:pt-[72px] flex items-center justify-center">
-        <p className="text-sm text-muted-foreground">Carregando...</p>
-      </div>
-    );
-  }
-
-  if (!creator) {
-    return (
-      <div className="min-h-screen bg-background pt-14 md:pt-[72px] flex items-center justify-center">
-        <p className="text-sm text-muted-foreground">Perfil não encontrado</p>
-      </div>
-    );
-  }
+  if (loading) return <div className="min-h-screen bg-background pt-14 md:pt-[72px] flex items-center justify-center"><p className="text-sm text-muted-foreground">Carregando...</p></div>;
+  if (!creator) return <div className="min-h-screen bg-background pt-14 md:pt-[72px] flex items-center justify-center"><p className="text-sm text-muted-foreground">Perfil não encontrado</p></div>;
 
   return (
     <div className="min-h-screen bg-background pt-12 md:pt-14 pb-20 md:pb-8">
@@ -79,15 +103,12 @@ const CreatorProfile = () => {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 md:px-6">
-        {/* Header */}
         <div className="-mt-12 relative z-10 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-end gap-4">
             <div className="w-24 h-24 rounded-full bg-secondary border-4 border-background flex items-center justify-center text-foreground text-3xl font-semibold overflow-hidden">
               {creator.avatar_url ? (
                 <img src={creator.avatar_url} alt={creator.name} className="w-full h-full object-cover" />
-              ) : (
-                creator.name[0]
-              )}
+              ) : creator.name[0]}
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-1.5">
@@ -95,28 +116,45 @@ const CreatorProfile = () => {
                 {creator.verified && <BadgeCheck className="w-4.5 h-4.5 text-accent" />}
               </div>
               <p className="text-sm text-muted-foreground">@{creator.username}</p>
-              {creator.bio && (
-                <p className="text-sm text-foreground/75 mt-2 max-w-md leading-relaxed">{creator.bio}</p>
-              )}
+              {creator.bio && <p className="text-sm text-foreground/75 mt-2 max-w-md leading-relaxed">{creator.bio}</p>}
             </div>
           </div>
 
           {/* Actions */}
-          {!isOwnProfile && creator.verified && (
-            <div className="flex gap-2 mt-4 flex-wrap">
+          {!isOwnProfile && creator.verified && user && (
+            <div className="flex gap-3 mt-5 flex-wrap">
+              {/* Follow button */}
+              <button
+                onClick={handleFollow}
+                disabled={followLoading}
+                className={`flex items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                  isFollowing
+                    ? "bg-secondary text-foreground border border-border hover:bg-secondary/80"
+                    : "bg-foreground text-background hover:bg-foreground/90"
+                }`}
+              >
+                {isFollowing ? <UserCheck className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                {isFollowing ? "Seguindo" : "Seguir"}
+              </button>
+
+              {/* Subscribe button */}
               {creator.price_monthly > 0 && (
-                <button className="flex items-center gap-1.5 px-5 py-2 text-sm font-medium bg-foreground text-background rounded-md hover:bg-foreground/90 transition-colors">
-                  <Lock className="w-3.5 h-3.5" /> Assinar R${Number(creator.price_monthly).toFixed(2)}/mês
+                <button
+                  onClick={() => !isSubscribed && setSubscribeOpen(true)}
+                  className={`flex items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                    isSubscribed
+                      ? "bg-accent/10 text-accent border border-accent/20"
+                      : "bg-foreground text-background hover:bg-foreground/90"
+                  }`}
+                >
+                  <Crown className="w-4 h-4" />
+                  {isSubscribed ? "Assinante" : `Assinar R$${Number(creator.price_monthly).toFixed(2)}/mês`}
                 </button>
               )}
-              <button className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium border border-border rounded-md text-foreground hover:bg-secondary transition-colors">
-                <Gift className="w-3.5 h-3.5" /> Presente
-              </button>
-              <button className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium border border-border rounded-md text-foreground hover:bg-secondary transition-colors">
-                <UserPlus className="w-3.5 h-3.5" /> Seguir
-              </button>
-              <button className="p-2 border border-border rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                <Share2 className="w-4 h-4" />
+
+              {/* Share */}
+              <button className="p-2.5 border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                <Share2 className="w-4.5 h-4.5" />
               </button>
             </div>
           )}
@@ -158,11 +196,29 @@ const CreatorProfile = () => {
                 type={post.post_visibility}
                 price={post.ppv_price > 0 ? post.ppv_price : undefined}
                 timeAgo={getTimeAgo(post.created_at)}
+                isAdmin={isAdmin}
+                isOwner={isOwnProfile}
+                isSubscribed={isSubscribed}
+                hasPurchased={purchasedPosts.has(post.id)}
+                creatorId={creator.id}
+                creatorPriceMonthly={creator.price_monthly}
+                creatorPriceYearly={creator.price_yearly}
+                currentUserId={user?.id}
               />
             ))
           )}
         </div>
       </div>
+
+      {/* Subscribe Modal */}
+      <SubscribeModal
+        open={subscribeOpen}
+        onClose={() => setSubscribeOpen(false)}
+        creatorName={creator.name}
+        priceMonthly={creator.price_monthly}
+        priceYearly={creator.price_yearly}
+        onConfirm={handleSubscribeConfirm}
+      />
     </div>
   );
 };
