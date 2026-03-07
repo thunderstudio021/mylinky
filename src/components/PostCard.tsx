@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import GiftModal from "./GiftModal";
+import AuthOverlay from "./AuthOverlay";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -100,7 +101,8 @@ const PostCard = ({
 
   return (
     <>
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
+      <div className="bg-card border border-border rounded-lg overflow-hidden relative">
+        {!currentUserId && <AuthOverlay />}
         {/* Header */}
         <div className="flex items-center justify-between p-4">
           <Link to={`/${creator.username}`} className="flex items-center gap-3 group">
