@@ -51,17 +51,9 @@ const Index = () => {
     return `${Math.floor(hours / 24)}d`;
   };
 
-  const filteredPosts = (activeTab === "Seguindo"
+  const filteredPosts = activeTab === "Seguindo"
     ? posts.filter((p) => following.has(p.creator_id))
-    : posts.filter((p) => (p.profiles as any)?.verified)
-  ).filter((p) => {
-    if (user?.id === p.creator_id || isAdmin) return true;
-    if (p.post_visibility === "free") return true;
-    if (p.post_visibility === "subscribers" && subscriptions.has(p.creator_id)) return true;
-    if (p.post_visibility === "ppv" && purchases.has(p.id)) return true;
-    if (p.post_visibility === "ppv-subscribers" && (subscriptions.has(p.creator_id) || purchases.has(p.id))) return true;
-    return false;
-  });
+    : posts.filter((p) => (p.profiles as any)?.verified);
 
   return (
     <div className="min-h-screen bg-background pt-14 md:pt-[72px] pb-20 md:pb-8">

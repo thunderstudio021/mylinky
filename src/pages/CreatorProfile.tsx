@@ -316,53 +316,47 @@ const CreatorProfile = () => {
 
         {/* Posts */}
         <div className="space-y-4">
-          {(() => {
-            const visiblePosts = posts.filter((post) => {
-              // Owner and admin see everything
-              if (isOwnProfile || isAdmin) return true;
-              // Free posts visible to all
-              if (post.post_visibility === "free") return true;
-              // Subscriber-only posts
-              if (post.post_visibility === "subscribers" && isSubscribed) return true;
-              // PPV posts - only if purchased
-              if (post.post_visibility === "ppv" && purchasedPosts.has(post.id)) return true;
-              // PPV+subscribers
-              if (post.post_visibility === "ppv-subscribers" && (isSubscribed || purchasedPosts.has(post.id))) return true;
-              return false;
-            });
-
-            return visiblePosts.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-12">
-                {isOwnProfile ? "Você ainda não publicou nada." : posts.length > 0 ? "Assine para ver as publicações exclusivas." : "Nenhuma publicação ainda."}
-              </p>
-            ) : (
-              visiblePosts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  id={post.id}
-                  creator={{ name: creator.name, username: creator.username, verified: creator.verified }}
-                  content={post.content}
-                  image={post.media_type === "photo" ? post.media_url : undefined}
-                  video={post.media_type === "video" ? post.media_url : undefined}
-                  likes={post.likes_count}
-                  comments={post.comments_count}
-                  locked={false}
-                  type={post.post_visibility}
-                  price={post.ppv_price > 0 ? post.ppv_price : undefined}
-                  timeAgo={getTimeAgo(post.created_at)}
-                  isAdmin={isAdmin}
-                  isOwner={isOwnProfile}
-                  isSubscribed={isSubscribed}
-                  hasPurchased={purchasedPosts.has(post.id)}
-                  creatorId={creator.id}
-                  creatorPriceMonthly={creator.price_monthly}
-                  creatorPriceYearly={creator.price_yearly}
-                  currentUserId={user?.id}
-                  mediaType={post.media_type}
-                />
-              ))
-            );
-          })()}
+          {posts.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-12">
+              {isOwnProfile ? "Você ainda não publicou nada." : "Nenhuma publicação ainda."}
+            </p>
+          ) : (
+            posts.map((post) => (
+              <PostCard
+                key={post.id}
+                id={post.id}
+                creator={{ name: creator.name, username: creator.username, verified: creator.verified }}
+                content={post.content}
+                image={post.media_type === "photo" ? post.media_url : undefined}
+                video={post.media_type === "video" ? post.media_url : undefined}
+                likes={post.likes_count}
+                comments={post.comments_count}
+                locked={false}
+                type={post.post_visibility}
+                price={post.ppv_price > 0 ? post.ppv_price : undefined}
+                timeAgo={getTimeAgo(post.created_at)}
+                isAdmin={isAdmin}
+                isOwner={isOwnProfile}
+                isSubscribed={isSubscribed}
+                hasPurchased={purchasedPosts.has(post.id)}
+                creatorId={creator.id}
+                creatorPriceMonthly={creator.price_monthly}
+                creatorPriceYearly={creator.price_yearly}
+                currentUserId={user?.id}
+                mediaType={post.media_type}
+                onDelete={(postId) => setPosts(posts.filter(p => p.id !== postId))}
+                onUnlocked={() => {
+                  // Reload subscription state
+                  if (user) {
+                    supabase.from("subscriptions").select("id").eq("subscriber_id", user.id).eq("creator_id", creator.id).eq("status", "active").maybeSingle()
+                      .then(({ data }) => setIsSubscribed(!!data));
+                    supabase.from("ppv_purchases").select("post_id").eq("buyer_id", user.id)
+                      .then(({ data }) => setPurchasedPosts(new Set((data || []).map((p: any) => p.post_id))));
+                  }
+                }}
+              />
+            ))
+          )}
         </div>
       </div>
 
