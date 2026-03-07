@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Home, Compass, User, Menu, X, LogIn, LogOut,
   Search, MessageCircle, UserPlus2, Link2, Users2, UserCheck,
-  Wallet, Heart, Settings, HelpCircle, ArrowLeft, Shield,
+  Wallet, Heart, Settings, HelpCircle, ArrowLeft, Shield, Pencil,
   Bell, Plus, Camera, Video, FileText, BarChart3,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
