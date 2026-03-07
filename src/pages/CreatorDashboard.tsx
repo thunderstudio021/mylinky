@@ -143,7 +143,11 @@ const CreatorDashboard = () => {
     return () => { supabase.removeChannel(channel); };
   }, [user, loadFinancials]);
 
-  const availableBalance = revenueLiquido - totalWithdrawn - totalPending;
+  // Available = PIX líquido (instant) + Card líquido available (D+14 passed) - withdrawn - pending
+  const pixLiquido = pixBruto * (1 - commissionRate / 100);
+  const cardLiquidoAvailable = cardAvailable * (1 - commissionRate / 100);
+  const cardLiquidoLocked = cardLocked * (1 - commissionRate / 100);
+  const availableBalance = pixLiquido + cardLiquidoAvailable - totalWithdrawn - totalPending;
 
   // Filtered transactions by period
   const filteredTransactions = useMemo(() => {
@@ -154,6 +158,8 @@ const CreatorDashboard = () => {
 
   const filteredBruto = useMemo(() => filteredTransactions.reduce((s, tx) => s + tx.amount, 0), [filteredTransactions]);
   const filteredLiquido = useMemo(() => filteredBruto * (1 - commissionRate / 100), [filteredBruto, commissionRate]);
+  const filteredPixBruto = useMemo(() => filteredTransactions.filter(tx => tx.method === "pix").reduce((s, tx) => s + tx.amount, 0), [filteredTransactions]);
+  const filteredCardBruto = useMemo(() => filteredTransactions.filter(tx => tx.method === "credit_card").reduce((s, tx) => s + tx.amount, 0), [filteredTransactions]);
 
   const handleWithdraw = async () => {
     const val = parseFloat(amount);
