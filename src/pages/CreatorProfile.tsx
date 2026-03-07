@@ -1,6 +1,6 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
-import { Users, FileText, Heart, Crown, UserPlus, BadgeCheck, UserCheck, Camera, Pencil, Check, X } from "lucide-react";
+import { Users, FileText, Heart, Crown, UserPlus, BadgeCheck, UserCheck, Camera, Pencil, Check, X, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import PostCard from "@/components/PostCard";
