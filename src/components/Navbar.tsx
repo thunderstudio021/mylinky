@@ -3,11 +3,12 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Home, Compass, User, Menu, X, LogIn, LogOut,
-  Search, MessageCircle, UserPlus2, Link2, Users2, UserCheck,
+  Search, MessageCircle, UserPlus2, Link2, Users2,
   Wallet, Heart, Settings, HelpCircle, ArrowLeft, Shield, Pencil,
-  Bell, Plus, Camera, Video, FileText, BarChart3,
+  Bell, Plus,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import CreatePostModal from "@/components/CreatePostModal";
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -33,12 +34,6 @@ const Navbar = () => {
     navigate("/");
   };
 
-  const createOptions = [
-    { icon: Camera, label: "Foto", action: () => { setCreateOpen(false); navigate("/dashboard?tab=create&type=photo"); } },
-    { icon: Video, label: "Vídeo", action: () => { setCreateOpen(false); navigate("/dashboard?tab=create&type=video"); } },
-    { icon: FileText, label: "Texto", action: () => { setCreateOpen(false); navigate("/dashboard?tab=create&type=text"); } },
-    { icon: BarChart3, label: "Enquete", action: () => { setCreateOpen(false); navigate("/dashboard?tab=create&type=poll"); } },
-  ];
 
   const NotificationBell = ({ className = "" }: { className?: string }) => (
     <button className={`relative ${className}`}>
@@ -145,45 +140,7 @@ const Navbar = () => {
       </nav>
 
       {/* Create Post Modal */}
-      <AnimatePresence>
-        {createOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[110] flex items-end md:items-center justify-center"
-          >
-            <div className="absolute inset-0 bg-black/60" onClick={() => setCreateOpen(false)} />
-            <motion.div
-              initial={{ y: 100, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 100, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-sm mx-4 mb-20 md:mb-0 bg-card border border-border rounded-xl p-5"
-            >
-              <p className="text-sm font-semibold text-foreground mb-4">Criar publicação</p>
-              <div className="grid grid-cols-2 gap-2">
-                {createOptions.map((opt) => (
-                  <button
-                    key={opt.label}
-                    onClick={opt.action}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-secondary transition-colors text-left"
-                  >
-                    <opt.icon className="w-5 h-5 text-muted-foreground" />
-                    <span className="text-sm text-foreground">{opt.label}</span>
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => setCreateOpen(false)}
-                className="w-full mt-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Cancelar
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <CreatePostModal open={createOpen} onClose={() => setCreateOpen(false)} />
 
       {/* Fullscreen Menu Overlay */}
       <AnimatePresence>
