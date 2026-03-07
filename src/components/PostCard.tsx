@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, BadgeCheck, X, Play, Gift } from "lucide-react";
+import { Heart, MessageCircle, BadgeCheck, X, Play, Gift, MoreVertical, Pencil, Trash2, MessageSquareOff } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
