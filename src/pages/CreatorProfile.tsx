@@ -164,8 +164,8 @@ const CreatorProfile = () => {
   return (
     <div className="min-h-screen bg-background pt-12 md:pt-14 pb-20 md:pb-8">
       {/* Hidden file inputs */}
-      <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-      <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+      <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFileSelect(e, "avatar")} />
+      <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFileSelect(e, "cover")} />
 
       {/* Cover */}
       <div className="relative h-40 md:h-56 bg-secondary group">
@@ -365,6 +365,15 @@ const CreatorProfile = () => {
         priceMonthly={creator.price_monthly}
         priceYearly={creator.price_yearly}
         onConfirm={handleSubscribeConfirm}
+      />
+
+      <ImageCropModal
+        open={cropOpen}
+        imageUrl={cropImageUrl}
+        aspectRatio={cropType === "avatar" ? 1 : 16 / 5}
+        shape={cropType === "avatar" ? "circle" : "rect"}
+        onConfirm={handleCropConfirm}
+        onClose={() => setCropOpen(false)}
       />
     </div>
   );
