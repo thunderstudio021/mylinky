@@ -9,15 +9,17 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import CreatePostModal from "@/components/CreatePostModal";
+import NotificationPanel, { useUnreadNotifications } from "@/components/NotificationPanel";
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, logout, isAdmin, isCreator } = useAuth();
 
-  const notificationCount = 3; // mock
+  const notificationCount = useUnreadNotifications();
 
   const canCreate = isCreator || isAdmin;
   const bottomItems = [
@@ -37,11 +39,11 @@ const Navbar = () => {
 
 
   const NotificationBell = ({ className = "" }: { className?: string }) => (
-    <button className={`relative ${className}`}>
+    <button className={`relative ${className}`} onClick={() => user && setNotifOpen(true)}>
       <Bell className="w-5 h-5" />
       {notificationCount > 0 && (
         <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-destructive text-destructive-foreground text-[10px] font-semibold rounded-full">
-          +{Math.min(notificationCount, 9)}
+          {Math.min(notificationCount, 99)}
         </span>
       )}
     </button>
@@ -146,6 +148,9 @@ const Navbar = () => {
 
       {/* Create Post Modal */}
       <CreatePostModal open={createOpen} onClose={() => setCreateOpen(false)} />
+
+      {/* Notification Panel */}
+      <NotificationPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
 
       {/* Fullscreen Menu Overlay */}
       <AnimatePresence>
