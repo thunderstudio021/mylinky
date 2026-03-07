@@ -58,7 +58,7 @@ const Navbar = () => {
       {/* Desktop top bar */}
       <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 h-14 items-center justify-between px-6 bg-background/80 backdrop-blur-md border-b border-border">
         <Link to="/" className="flex items-center">
-          <img src={logoImg} alt="Logo" className="h-7 invert" />
+          <img src={logoImg} alt="Logo" className="h-7" />
         </Link>
         <div className="flex items-center gap-1">
           {[
@@ -110,7 +110,7 @@ const Navbar = () => {
 
       {/* Mobile top */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 h-12 flex items-center justify-between px-4 bg-background/80 backdrop-blur-md border-b border-border">
-        <Link to="/" className="flex items-center"><img src={logoImg} alt="Logo" className="h-6 invert" /></Link>
+        <Link to="/" className="flex items-center"><img src={logoImg} alt="Logo" className="h-6" /></Link>
         <div className="flex items-center gap-3">
           <NotificationBell className="text-muted-foreground hover:text-foreground transition-colors" />
           {!user && (
