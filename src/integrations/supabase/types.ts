@@ -302,6 +302,45 @@ export type Database = {
         }
         Relationships: []
       }
+      withdrawal_requests: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          bank_name: string
+          created_at: string
+          creator_id: string
+          id: string
+          pix_key: string
+          pix_key_holder_name: string
+          reviewed_at: string | null
+          status: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount: number
+          bank_name: string
+          created_at?: string
+          creator_id: string
+          id?: string
+          pix_key: string
+          pix_key_holder_name: string
+          reviewed_at?: string | null
+          status?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          bank_name?: string
+          created_at?: string
+          creator_id?: string
+          id?: string
+          pix_key?: string
+          pix_key_holder_name?: string
+          reviewed_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
