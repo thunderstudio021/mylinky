@@ -25,9 +25,9 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const CreatorRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isCreator, loading } = useAuth();
+  const { isCreator, isAdmin, loading } = useAuth();
   if (loading) return null;
-  return isCreator ? <>{children}</> : <Navigate to="/" replace />;
+  return (isCreator || isAdmin) ? <>{children}</> : <Navigate to="/" replace />;
 };
 
 const AuthRoute = ({ children }: { children: React.ReactNode }) => {
