@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { toast } from "sonner";
@@ -10,7 +10,7 @@ import {
   Menu, X, LayoutDashboard, Users, FileText, Wallet,
   ChevronRight, Search, CheckCircle, XCircle, Eye, Pencil,
   Trash2, Ban, Shield, TrendingUp, Image, Video, UserCheck,
-  ArrowLeft, Save, Percent, LogOut, Heart, Gift,
+  ArrowLeft, Save, Percent, LogOut, Heart, Gift, UserX, Unlock,
 } from "lucide-react";
 
 // ─── Admin Header ───
@@ -33,7 +33,8 @@ const AdminSidebar = ({
 }) => {
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "creators", label: "Criadores", icon: Users },
+    { id: "creators", label: "Criadores", icon: UserCheck },
+    { id: "users", label: "Usuários", icon: Users },
     { id: "withdrawals", label: "Saques", icon: Wallet },
     { id: "posts", label: "Publicações", icon: FileText },
   ];
@@ -153,7 +154,6 @@ const DashboardTab = () => {
       followersTotal: followersRes.count || 0,
     });
 
-    // Monthly data
     const allTransactions = [
       ...allSubs.map(s => ({ amount: Number(s.amount), created_at: (s as any).created_at })),
       ...gifts.map(g => ({ amount: Number(g.amount), created_at: (g as any).created_at })),
@@ -177,7 +177,6 @@ const DashboardTab = () => {
 
   useEffect(() => { loadStats(); }, [loadStats]);
 
-  // Realtime updates
   useEffect(() => {
     const channel = supabase
       .channel("admin-dashboard-realtime")
@@ -199,7 +198,6 @@ const DashboardTab = () => {
         <p className="text-xs text-muted-foreground mt-0.5">Visão geral da plataforma</p>
       </div>
 
-      {/* Financial highlight */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="bg-card border border-border rounded-xl p-5">
           <span className="text-xs text-muted-foreground">Faturamento bruto</span>
@@ -218,7 +216,6 @@ const DashboardTab = () => {
         </div>
       </div>
 
-      {/* Monthly revenue chart */}
       <div className="bg-card border border-border rounded-xl p-5">
         <h3 className="text-sm font-medium text-foreground mb-1">Vendas mensais</h3>
         <p className="text-xs text-muted-foreground mb-4">Últimos 6 meses</p>
@@ -235,25 +232,11 @@ const DashboardTab = () => {
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(0, 0%, 48%)" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: "hsl(0, 0%, 48%)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `R$${v}`} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(0, 0%, 6%)",
-                  border: "1px solid hsl(0, 0%, 12%)",
-                  borderRadius: "8px",
-                  fontSize: "12px",
-                  color: "hsl(0, 0%, 92%)",
-                }}
+                contentStyle={{ backgroundColor: "hsl(0, 0%, 6%)", border: "1px solid hsl(0, 0%, 12%)", borderRadius: "8px", fontSize: "12px", color: "hsl(0, 0%, 92%)" }}
                 formatter={(value: number) => [`R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, "Vendas"]}
                 labelStyle={{ color: "hsl(0, 0%, 48%)" }}
               />
-              <Area
-                type="monotone"
-                dataKey="valor"
-                stroke="hsl(0, 0%, 92%)"
-                strokeWidth={2}
-                fill="url(#revenueGradient)"
-                dot={{ r: 3, fill: "hsl(0, 0%, 92%)", strokeWidth: 0 }}
-                activeDot={{ r: 5, fill: "hsl(0, 0%, 92%)", strokeWidth: 0 }}
-              />
+              <Area type="monotone" dataKey="valor" stroke="hsl(0, 0%, 92%)" strokeWidth={2} fill="url(#revenueGradient)" dot={{ r: 3, fill: "hsl(0, 0%, 92%)", strokeWidth: 0 }} activeDot={{ r: 5, fill: "hsl(0, 0%, 92%)", strokeWidth: 0 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -266,21 +249,17 @@ const DashboardTab = () => {
         <MetricCard label="Presentes" value={stats.giftsTotal} icon={Gift} />
       </div>
 
-      {/* Secondary metrics */}
       <div className="grid grid-cols-3 gap-3">
         <MetricCardSmall label="Publicações" value={stats.posts} />
         <MetricCardSmall label="Fotos" value={stats.photos} />
         <MetricCardSmall label="Vídeos" value={stats.videos} />
       </div>
 
-      {/* Alerts */}
       {(stats.pendingApps > 0 || stats.pendingWithdrawals > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {stats.pendingApps > 0 && (
             <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                <UserCheck className="w-4 h-4 text-foreground" />
-              </div>
+              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center"><UserCheck className="w-4 h-4 text-foreground" /></div>
               <div>
                 <p className="text-sm font-medium text-foreground">{stats.pendingApps} solicitação(ões) pendente(s)</p>
                 <p className="text-xs text-muted-foreground">Criadores aguardando aprovação</p>
@@ -289,9 +268,7 @@ const DashboardTab = () => {
           )}
           {stats.pendingWithdrawals > 0 && (
             <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-                <Wallet className="w-4 h-4 text-foreground" />
-              </div>
+              <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center"><Wallet className="w-4 h-4 text-foreground" /></div>
               <div>
                 <p className="text-sm font-medium text-foreground">{stats.pendingWithdrawals} saque(s) pendente(s)</p>
                 <p className="text-xs text-muted-foreground">Aguardando análise</p>
@@ -301,7 +278,6 @@ const DashboardTab = () => {
         </div>
       )}
 
-      {/* Recent users */}
       <div>
         <h3 className="text-sm font-medium text-foreground mb-3">Últimos cadastros</h3>
         <div className="bg-card border border-border rounded-xl divide-y divide-border">
@@ -332,9 +308,7 @@ const MetricCard = ({ label, value, icon: Icon }: { label: string; value: string
   <div className="bg-card border border-border rounded-xl p-4 group">
     <div className="flex items-center justify-between mb-3">
       <span className="text-xs text-muted-foreground">{label}</span>
-      <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center">
-        <Icon className="w-3.5 h-3.5 text-foreground" />
-      </div>
+      <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center"><Icon className="w-3.5 h-3.5 text-foreground" /></div>
     </div>
     <p className="text-2xl font-bold text-foreground tracking-tight">{value}</p>
   </div>
@@ -347,55 +321,60 @@ const MetricCardSmall = ({ label, value }: { label: string; value: string | numb
   </div>
 );
 
-// ─── Creators Tab ───
+// ─── Creators Tab (with application review detail) ───
 const CreatorsTab = () => {
   const [creators, setCreators] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<any | null>(null);
+  const [reviewing, setReviewing] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
-    // Get all profiles + their applications
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    const { data: apps } = await supabase
-      .from("creator_applications")
-      .select("*")
-      .order("created_at", { ascending: true });
-
+    const { data: profiles } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+    const { data: apps } = await supabase.from("creator_applications").select("*").order("created_at", { ascending: true });
     const appMap = new Map((apps || []).map(a => [a.user_id, a]));
-
-    // Combine: show creators (is_creator or verified) + pending applicants
     const allProfiles = profiles || [];
     const creatorsWithApps = allProfiles
       .filter(p => (p as any).is_creator || p.verified || appMap.has(p.id))
-      .map(p => ({
-        ...p,
-        application: appMap.get(p.id) || null,
-      }))
+      .map(p => ({ ...p, application: appMap.get(p.id) || null }))
       .sort((a, b) => {
-        // Pending first, then by creation date
         const aPending = a.application?.status === "pending" ? 0 : 1;
         const bPending = b.application?.status === "pending" ? 0 : 1;
         if (aPending !== bPending) return aPending - bPending;
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
-
     setCreators(creatorsWithApps);
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
+  const loadSignedUrl = async (path: string) => {
+    if (!path || signedUrls[path]) return;
+    const { data } = await supabase.storage.from("documents").createSignedUrl(path, 600);
+    if (data?.signedUrl) setSignedUrls(prev => ({ ...prev, [path]: data.signedUrl }));
+  };
+
+  const openReview = async (creator: any) => {
+    setReviewing(creator);
+    const app = creator.application;
+    if (app) {
+      await Promise.all([
+        loadSignedUrl(app.document_front_url),
+        loadSignedUrl(app.document_back_url),
+        loadSignedUrl(app.selfie_url),
+      ]);
+    }
+  };
+
   const handleApprove = async (appId: string) => {
     const { error } = await supabase.rpc("approve_creator", { _application_id: appId });
     if (error) { toast.error("Erro: " + error.message); return; }
     toast.success("Criador aprovado!");
+    setReviewing(null);
     load();
   };
 
@@ -403,22 +382,32 @@ const CreatorsTab = () => {
     const { error } = await supabase.rpc("reject_creator", { _application_id: appId });
     if (error) { toast.error("Erro: " + error.message); return; }
     toast.success("Solicitação rejeitada");
+    setReviewing(null);
+    load();
+  };
+
+  const handleBlock = async (profileId: string, blocked: boolean) => {
+    const { error } = await supabase.from("profiles").update({ blocked }).eq("id", profileId);
+    if (error) { toast.error("Erro: " + error.message); return; }
+    toast.success(blocked ? "Criador bloqueado" : "Criador desbloqueado");
+    load();
+  };
+
+  const handleDelete = async (profileId: string) => {
+    if (!confirm("Tem certeza que deseja excluir este criador? Esta ação não pode ser desfeita.")) return;
+    const { error } = await supabase.from("profiles").delete().eq("id", profileId);
+    if (error) { toast.error("Erro: " + error.message); return; }
+    toast.success("Criador excluído");
     load();
   };
 
   const handleSaveEdit = async () => {
     if (!editing) return;
     setSaving(true);
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        name: editing.name,
-        username: editing.username,
-        email: editing.email,
-        verified: editing.verified,
-        commission_rate: editing.commission_rate,
-      })
-      .eq("id", editing.id);
+    const { error } = await supabase.from("profiles").update({
+      name: editing.name, username: editing.username, email: editing.email,
+      verified: editing.verified, commission_rate: editing.commission_rate,
+    }).eq("id", editing.id);
     setSaving(false);
     if (error) { toast.error("Erro ao salvar: " + error.message); return; }
     toast.success("Perfil atualizado!");
@@ -427,13 +416,113 @@ const CreatorsTab = () => {
   };
 
   const filtered = creators.filter(c =>
-    !search ||
-    c.name?.toLowerCase().includes(search.toLowerCase()) ||
+    !search || c.name?.toLowerCase().includes(search.toLowerCase()) ||
     c.username?.toLowerCase().includes(search.toLowerCase()) ||
     c.email?.toLowerCase().includes(search.toLowerCase())
   );
 
   if (loading) return <LoadingState />;
+
+  // Application review detail page
+  if (reviewing) {
+    const app = reviewing.application;
+    const formatCpf = (v: string) => {
+      if (!v) return "";
+      const d = v.replace(/\D/g, "");
+      if (d.length !== 11) return v;
+      return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`;
+    };
+    const formatPhone = (v: string) => {
+      if (!v) return "";
+      const d = v.replace(/\D/g, "");
+      if (d.length < 10) return v;
+      return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;
+    };
+
+    return (
+      <div>
+        <button onClick={() => setReviewing(null)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Voltar
+        </button>
+        <div className="bg-card border border-border rounded-xl p-5 max-w-2xl space-y-5">
+          <h2 className="text-lg font-semibold text-foreground">Análise de Solicitação</h2>
+
+          {/* Personal Info */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Dados Pessoais</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <InfoField label="Nome completo" value={app?.full_name || reviewing.name} />
+              <InfoField label="CPF" value={formatCpf(app?.cpf || "")} />
+              <InfoField label="Telefone" value={formatPhone(app?.phone || "")} />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <InfoField label="Email" value={reviewing.email} />
+              <InfoField label="Username" value={`@${reviewing.username}`} />
+            </div>
+          </div>
+
+          {/* Profile Photos */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Fotos do Perfil</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Foto de Perfil</label>
+                <div className="w-24 h-24 rounded-full bg-secondary overflow-hidden border border-border">
+                  {(app?.avatar_url || reviewing.avatar_url) ? (
+                    <img src={app?.avatar_url || reviewing.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">Sem foto</div>}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Foto de Capa</label>
+                <div className="h-24 rounded-lg bg-secondary overflow-hidden border border-border">
+                  {(app?.cover_url || reviewing.cover_url) ? (
+                    <img src={app?.cover_url || reviewing.cover_url} alt="" className="w-full h-full object-cover" />
+                  ) : <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">Sem foto</div>}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Documents */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Documentos de Verificação</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <DocImage label="Documento (Frente)" url={signedUrls[app?.document_front_url || ""] || ""} />
+              <DocImage label="Documento (Verso)" url={signedUrls[app?.document_back_url || ""] || ""} />
+              <DocImage label="Selfie com Documento" url={signedUrls[app?.selfie_url || ""] || ""} />
+            </div>
+          </div>
+
+          {/* Actions */}
+          {app?.status === "pending" && (
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => handleApprove(app.id)}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors"
+              >
+                <CheckCircle className="w-4 h-4" /> Aprovar Criador
+              </button>
+              <button
+                onClick={() => handleReject(app.id)}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors"
+              >
+                <XCircle className="w-4 h-4" /> Rejeitar
+              </button>
+            </div>
+          )}
+          {app?.status && app.status !== "pending" && (
+            <div className={`text-sm font-medium px-3 py-2 rounded-lg ${
+              app.status === "approved" ? "bg-emerald-500/10 text-emerald-400" : "bg-destructive/10 text-destructive"
+            }`}>
+              {app.status === "approved" ? "✓ Aprovado" : "✗ Rejeitado"}
+              {app.reviewed_at && ` em ${new Date(app.reviewed_at).toLocaleDateString("pt-BR")}`}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // Edit view
   if (editing) {
@@ -445,53 +534,35 @@ const CreatorsTab = () => {
         <div className="bg-card border border-border rounded-xl p-5 space-y-4 max-w-lg">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold overflow-hidden">
-              {editing.avatar_url ? (
-                <img src={editing.avatar_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                editing.name?.[0] || "U"
-              )}
+              {editing.avatar_url ? <img src={editing.avatar_url} alt="" className="w-full h-full object-cover" /> : editing.name?.[0] || "U"}
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">{editing.name}</p>
               <p className="text-xs text-muted-foreground">@{editing.username}</p>
             </div>
           </div>
-
           <EditField label="Nome" value={editing.name} onChange={v => setEditing({ ...editing, name: v })} />
           <EditField label="Usuário (@)" value={editing.username} onChange={v => setEditing({ ...editing, username: v })} />
           <EditField label="Email" value={editing.email} onChange={v => setEditing({ ...editing, email: v })} />
-          
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Comissão da plataforma (%)</label>
             <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min={0} max={100}
-                value={editing.commission_rate ?? 20}
+              <input type="number" min={0} max={100} value={editing.commission_rate ?? 20}
                 onChange={e => setEditing({ ...editing, commission_rate: Number(e.target.value) })}
-                className="w-24 bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"
-              />
+                className="w-24 bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring" />
               <Percent className="w-4 h-4 text-muted-foreground" />
             </div>
           </div>
-
           <div className="flex items-center gap-3">
             <label className="text-xs text-muted-foreground">Verificado</label>
-            <button
-              onClick={() => setEditing({ ...editing, verified: !editing.verified })}
-              className={`w-10 h-5 rounded-full transition-colors relative ${editing.verified ? "bg-emerald-500" : "bg-secondary"}`}
-            >
+            <button onClick={() => setEditing({ ...editing, verified: !editing.verified })}
+              className={`w-10 h-5 rounded-full transition-colors relative ${editing.verified ? "bg-emerald-500" : "bg-secondary"}`}>
               <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-foreground transition-transform ${editing.verified ? "left-5" : "left-0.5"}`} />
             </button>
           </div>
-
-          <button
-            onClick={handleSaveEdit}
-            disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-foreground text-background rounded-lg hover:bg-foreground/90 transition-colors disabled:opacity-50"
-          >
-            <Save className="w-3.5 h-3.5" />
-            {saving ? "Salvando..." : "Salvar alterações"}
+          <button onClick={handleSaveEdit} disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-foreground text-background rounded-lg hover:bg-foreground/90 transition-colors disabled:opacity-50">
+            <Save className="w-3.5 h-3.5" /> {saving ? "Salvando..." : "Salvar alterações"}
           </button>
         </div>
       </div>
@@ -504,72 +575,184 @@ const CreatorsTab = () => {
         <h2 className="text-lg font-semibold text-foreground">Criadores</h2>
         <span className="text-xs text-muted-foreground">{creators.length} total</span>
       </div>
-
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <input
-          type="text"
-          placeholder="Pesquisar criador..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full bg-card border border-border rounded-lg pl-9 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring"
-        />
+        <input type="text" placeholder="Pesquisar criador..." value={search} onChange={e => setSearch(e.target.value)}
+          className="w-full bg-card border border-border rounded-lg pl-9 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring" />
       </div>
-
       <div className="space-y-2">
-        {filtered.length === 0 ? (
-          <EmptyState text="Nenhum criador encontrado" />
-        ) : (
-          filtered.map(c => (
-            <div key={c.id} className="bg-card border border-border rounded-xl p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold shrink-0 overflow-hidden">
-                    {c.avatar_url ? (
-                      <img src={c.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      c.name?.[0] || "U"
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
-                      {c.verified && (
-                        <Shield className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">@{c.username} · {c.email}</p>
-                    <p className="text-xs text-muted-foreground">Comissão: {c.commission_rate ?? 20}%</p>
-                  </div>
+        {filtered.length === 0 ? <EmptyState text="Nenhum criador encontrado" /> : filtered.map(c => (
+          <div key={c.id} className={`bg-card border rounded-xl p-4 ${c.blocked ? "border-destructive/30" : "border-border"}`}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0 cursor-pointer" onClick={() => c.application ? openReview(c) : null}>
+                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold shrink-0 overflow-hidden">
+                  {c.avatar_url ? <img src={c.avatar_url} alt="" className="w-full h-full object-cover" /> : c.name?.[0] || "U"}
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {c.application?.status === "pending" && (
-                    <>
-                      <button
-                        onClick={() => handleApprove(c.application.id)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors"
-                      >
-                        <CheckCircle className="w-3 h-3" /> Aceitar
-                      </button>
-                      <button
-                        onClick={() => handleReject(c.application.id)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors"
-                      >
-                        <XCircle className="w-3 h-3" /> Rejeitar
-                      </button>
-                    </>
-                  )}
-                  <button
-                    onClick={() => setEditing(c)}
-                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
+                    {c.verified && <Shield className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                    {c.blocked && <Ban className="w-3.5 h-3.5 text-destructive shrink-0" />}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">@{c.username} · {c.email}</p>
+                  <p className="text-xs text-muted-foreground">Comissão: {c.commission_rate ?? 20}%</p>
                 </div>
               </div>
+              <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+                {c.application?.status === "pending" && (
+                  <button onClick={() => openReview(c)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-amber-500/10 text-amber-400 rounded-lg hover:bg-amber-500/20 transition-colors">
+                    <Eye className="w-3 h-3" /> Analisar
+                  </button>
+                )}
+                <button onClick={() => setEditing(c)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors">
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => handleBlock(c.id, !c.blocked)}
+                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors" title={c.blocked ? "Desbloquear" : "Bloquear"}>
+                  {c.blocked ? <Unlock className="w-3.5 h-3.5" /> : <Ban className="w-3.5 h-3.5" />}
+                </button>
+                <button onClick={() => handleDelete(c.id)}
+                  className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
-          ))
-        )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─── Users Tab ───
+const UsersTab = () => {
+  const [users, setUsers] = useState<any[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<any | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
+    setUsers(data || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleBlock = async (id: string, blocked: boolean) => {
+    const { error } = await supabase.from("profiles").update({ blocked }).eq("id", id);
+    if (error) { toast.error("Erro: " + error.message); return; }
+    toast.success(blocked ? "Usuário bloqueado" : "Usuário desbloqueado");
+    load();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir este usuário?")) return;
+    const { error } = await supabase.from("profiles").delete().eq("id", id);
+    if (error) { toast.error("Erro: " + error.message); return; }
+    toast.success("Usuário excluído");
+    load();
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editing) return;
+    setSaving(true);
+    const { error } = await supabase.from("profiles").update({
+      name: editing.name, username: editing.username, email: editing.email, bio: editing.bio,
+    }).eq("id", editing.id);
+    setSaving(false);
+    if (error) { toast.error("Erro: " + error.message); return; }
+    toast.success("Usuário atualizado!");
+    setEditing(null);
+    load();
+  };
+
+  const filtered = users.filter(u =>
+    !search || u.name?.toLowerCase().includes(search.toLowerCase()) ||
+    u.username?.toLowerCase().includes(search.toLowerCase()) ||
+    u.email?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (loading) return <LoadingState />;
+
+  if (editing) {
+    return (
+      <div>
+        <button onClick={() => setEditing(null)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Voltar
+        </button>
+        <div className="bg-card border border-border rounded-xl p-5 space-y-4 max-w-lg">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold overflow-hidden">
+              {editing.avatar_url ? <img src={editing.avatar_url} alt="" className="w-full h-full object-cover" /> : editing.name?.[0] || "U"}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">{editing.name}</p>
+              <p className="text-xs text-muted-foreground">@{editing.username}</p>
+            </div>
+          </div>
+          <EditField label="Nome" value={editing.name} onChange={v => setEditing({ ...editing, name: v })} />
+          <EditField label="Usuário (@)" value={editing.username} onChange={v => setEditing({ ...editing, username: v })} />
+          <EditField label="Email" value={editing.email} onChange={v => setEditing({ ...editing, email: v })} />
+          <EditField label="Bio" value={editing.bio || ""} onChange={v => setEditing({ ...editing, bio: v })} />
+          <button onClick={handleSaveEdit} disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-foreground text-background rounded-lg hover:bg-foreground/90 transition-colors disabled:opacity-50">
+            <Save className="w-3.5 h-3.5" /> {saving ? "Salvando..." : "Salvar alterações"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-foreground">Usuários</h2>
+        <span className="text-xs text-muted-foreground">{users.length} total</span>
+      </div>
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <input type="text" placeholder="Pesquisar usuário..." value={search} onChange={e => setSearch(e.target.value)}
+          className="w-full bg-card border border-border rounded-lg pl-9 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring" />
+      </div>
+      <div className="space-y-2">
+        {filtered.length === 0 ? <EmptyState text="Nenhum usuário encontrado" /> : filtered.map(u => (
+          <div key={u.id} className={`bg-card border rounded-xl p-4 ${u.blocked ? "border-destructive/30" : "border-border"}`}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold shrink-0 overflow-hidden">
+                  {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : u.name?.[0] || "U"}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-foreground truncate">{u.name}</p>
+                    {u.is_creator && <UserCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                    {u.verified && <Shield className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                    {u.blocked && <Ban className="w-3.5 h-3.5 text-destructive shrink-0" />}
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">@{u.username} · {u.email}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString("pt-BR")}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={() => setEditing(u)} className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors">
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => handleBlock(u.id, !u.blocked)}
+                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors" title={u.blocked ? "Desbloquear" : "Bloquear"}>
+                  {u.blocked ? <Unlock className="w-3.5 h-3.5" /> : <Ban className="w-3.5 h-3.5" />}
+                </button>
+                <button onClick={() => handleDelete(u.id)}
+                  className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -583,20 +766,11 @@ const WithdrawalsTab = () => {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("withdrawal_requests")
-      .select("*")
-      .eq("status", tab)
-      .order("created_at", { ascending: false });
-
+    const { data } = await supabase.from("withdrawal_requests").select("*").eq("status", tab).order("created_at", { ascending: false });
     const reqs = data || [];
     const enriched = await Promise.all(
       reqs.map(async (r) => {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("name, username, avatar_url")
-          .eq("id", r.creator_id)
-          .single();
+        const { data: profile } = await supabase.from("profiles").select("name, username, avatar_url").eq("id", r.creator_id).single();
         return { ...r, profile };
       })
     );
@@ -607,10 +781,7 @@ const WithdrawalsTab = () => {
   useEffect(() => { load(); }, [load]);
 
   const handleUpdate = async (id: string, status: string) => {
-    const { error } = await supabase
-      .from("withdrawal_requests")
-      .update({ status, reviewed_at: new Date().toISOString() })
-      .eq("id", id);
+    const { error } = await supabase.from("withdrawal_requests").update({ status, reviewed_at: new Date().toISOString() }).eq("id", id);
     if (error) { toast.error("Erro: " + error.message); return; }
     toast.success(status === "approved" ? "Saque aprovado!" : "Saque rejeitado");
     load();
@@ -627,18 +798,12 @@ const WithdrawalsTab = () => {
       <h2 className="text-lg font-semibold text-foreground mb-4">Solicitações de Saque</h2>
       <div className="flex gap-1 mb-4">
         {statusTabs.map(t => (
-          <button
-            key={t.value}
-            onClick={() => setTab(t.value)}
-            className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-              tab === t.value ? "bg-secondary text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
+          <button key={t.value} onClick={() => setTab(t.value)}
+            className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${tab === t.value ? "bg-secondary text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
             {t.label}
           </button>
         ))}
       </div>
-
       {loading ? <LoadingState /> : requests.length === 0 ? (
         <EmptyState text={`Nenhum saque ${tab === "pending" ? "pendente" : tab === "approved" ? "aprovado" : "rejeitado"}`} />
       ) : (
@@ -648,11 +813,7 @@ const WithdrawalsTab = () => {
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold shrink-0 overflow-hidden">
-                    {r.profile?.avatar_url ? (
-                      <img src={r.profile.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      r.profile?.name?.[0] || "U"
-                    )}
+                    {r.profile?.avatar_url ? <img src={r.profile.avatar_url} alt="" className="w-full h-full object-cover" /> : r.profile?.name?.[0] || "U"}
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{r.profile?.name}</p>
@@ -662,16 +823,12 @@ const WithdrawalsTab = () => {
                 </div>
                 {tab === "pending" && (
                   <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => handleUpdate(r.id, "approved")}
-                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors"
-                    >
+                    <button onClick={() => handleUpdate(r.id, "approved")}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors">
                       <CheckCircle className="w-3 h-3" /> Aprovar
                     </button>
-                    <button
-                      onClick={() => handleUpdate(r.id, "rejected")}
-                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors"
-                    >
+                    <button onClick={() => handleUpdate(r.id, "rejected")}
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 transition-colors">
                       <XCircle className="w-3 h-3" /> Rejeitar
                     </button>
                   </div>
@@ -697,18 +854,10 @@ const PostsTab = () => {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("posts")
-      .select("*")
-      .order("created_at", { ascending: false });
-
+    const { data } = await supabase.from("posts").select("*").order("created_at", { ascending: false });
     const allPosts = data || [];
     const creatorIds = [...new Set(allPosts.map(p => p.creator_id))];
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, name, username, avatar_url")
-      .in("id", creatorIds);
-
+    const { data: profiles } = await supabase.from("profiles").select("id, name, username, avatar_url").in("id", creatorIds);
     const profileMap = new Map((profiles || []).map(p => [p.id, p]));
     setPosts(allPosts.map(p => ({ ...p, creator: profileMap.get(p.creator_id) })));
     setLoading(false);
@@ -725,8 +874,7 @@ const PostsTab = () => {
   };
 
   const filtered = posts.filter(p =>
-    !search ||
-    p.content?.toLowerCase().includes(search.toLowerCase()) ||
+    !search || p.content?.toLowerCase().includes(search.toLowerCase()) ||
     p.creator?.name?.toLowerCase().includes(search.toLowerCase()) ||
     p.creator?.username?.toLowerCase().includes(search.toLowerCase())
   );
@@ -739,68 +887,47 @@ const PostsTab = () => {
         <h2 className="text-lg font-semibold text-foreground">Publicações</h2>
         <span className="text-xs text-muted-foreground">{posts.length} total</span>
       </div>
-
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <input
-          type="text"
-          placeholder="Pesquisar publicação..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full bg-card border border-border rounded-lg pl-9 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring"
-        />
+        <input type="text" placeholder="Pesquisar publicação..." value={search} onChange={e => setSearch(e.target.value)}
+          className="w-full bg-card border border-border rounded-lg pl-9 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring" />
       </div>
-
       <div className="space-y-2">
-        {filtered.length === 0 ? (
-          <EmptyState text="Nenhuma publicação encontrada" />
-        ) : (
-          filtered.map(p => (
-            <div key={p.id} className="bg-card border border-border rounded-xl p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0 flex-1">
-                  <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-foreground text-xs font-semibold shrink-0 overflow-hidden">
-                    {p.creator?.avatar_url ? (
-                      <img src={p.creator.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      p.creator?.name?.[0] || "U"
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-xs font-medium text-foreground">{p.creator?.name}</p>
-                      <span className="text-xs text-muted-foreground">@{p.creator?.username}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                        p.post_visibility === "free" ? "bg-secondary text-muted-foreground" :
-                        p.post_visibility === "subscribers" ? "bg-blue-500/10 text-blue-400" :
-                        "bg-amber-500/10 text-amber-400"
-                      }`}>
-                        {p.post_visibility === "free" ? "Público" : p.post_visibility === "subscribers" ? "Assinantes" : "PPV"}
-                      </span>
-                    </div>
-                    <p className="text-sm text-foreground/80 line-clamp-2">{p.content || "(sem texto)"}</p>
-                    {p.media_url && (
-                      <div className="flex items-center gap-1 mt-1">
-                        {p.media_type === "image" ? <Image className="w-3 h-3 text-muted-foreground" /> : <Video className="w-3 h-3 text-muted-foreground" />}
-                        <span className="text-xs text-muted-foreground">{p.media_type === "image" ? "Foto" : "Vídeo"}</span>
-                      </div>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-1">{new Date(p.created_at).toLocaleDateString("pt-BR")}</p>
-                  </div>
+        {filtered.length === 0 ? <EmptyState text="Nenhuma publicação encontrada" /> : filtered.map(p => (
+          <div key={p.id} className="bg-card border border-border rounded-xl p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0 flex-1">
+                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-foreground text-xs font-semibold shrink-0 overflow-hidden">
+                  {p.creator?.avatar_url ? <img src={p.creator.avatar_url} alt="" className="w-full h-full object-cover" /> : p.creator?.name?.[0] || "U"}
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                    title="Excluir"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-xs font-medium text-foreground">{p.creator?.name}</p>
+                    <span className="text-xs text-muted-foreground">@{p.creator?.username}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                      p.post_visibility === "free" ? "bg-secondary text-muted-foreground" :
+                      p.post_visibility === "subscribers" ? "bg-blue-500/10 text-blue-400" : "bg-amber-500/10 text-amber-400"
+                    }`}>
+                      {p.post_visibility === "free" ? "Público" : p.post_visibility === "subscribers" ? "Assinantes" : "PPV"}
+                    </span>
+                  </div>
+                  <p className="text-sm text-foreground/80 line-clamp-2">{p.content || "(sem texto)"}</p>
+                  {p.media_url && (
+                    <div className="flex items-center gap-1 mt-1">
+                      {p.media_type === "image" ? <Image className="w-3 h-3 text-muted-foreground" /> : <Video className="w-3 h-3 text-muted-foreground" />}
+                      <span className="text-xs text-muted-foreground">{p.media_type === "image" ? "Foto" : "Vídeo"}</span>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">{new Date(p.created_at).toLocaleDateString("pt-BR")}</p>
                 </div>
               </div>
+              <button onClick={() => handleDelete(p.id)}
+                className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors shrink-0" title="Excluir">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
             </div>
-          ))
-        )}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -820,12 +947,30 @@ const EmptyState = ({ text }: { text: string }) => (
 const EditField = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
   <div>
     <label className="text-xs text-muted-foreground mb-1 block">{label}</label>
-    <input
-      type="text"
-      value={value || ""}
-      onChange={e => onChange(e.target.value)}
-      className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"
-    />
+    <input type="text" value={value || ""} onChange={e => onChange(e.target.value)}
+      className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring" />
+  </div>
+);
+
+const InfoField = ({ label, value }: { label: string; value: string }) => (
+  <div>
+    <label className="text-xs text-muted-foreground mb-0.5 block">{label}</label>
+    <p className="text-sm text-foreground bg-secondary border border-border rounded-lg px-3 py-2">{value || "—"}</p>
+  </div>
+);
+
+const DocImage = ({ label, url }: { label: string; url: string }) => (
+  <div>
+    <label className="text-xs text-muted-foreground mb-1 block">{label}</label>
+    <div className="h-36 rounded-lg bg-secondary border border-border overflow-hidden">
+      {url ? (
+        <a href={url} target="_blank" rel="noopener noreferrer">
+          <img src={url} alt={label} className="w-full h-full object-cover hover:opacity-80 transition-opacity" />
+        </a>
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">Carregando...</div>
+      )}
+    </div>
   </div>
 );
 
@@ -845,6 +990,7 @@ const AdminPanel = () => {
     switch (activeTab) {
       case "dashboard": return <DashboardTab />;
       case "creators": return <CreatorsTab />;
+      case "users": return <UsersTab />;
       case "withdrawals": return <WithdrawalsTab />;
       case "posts": return <PostsTab />;
       default: return <DashboardTab />;
@@ -854,13 +1000,7 @@ const AdminPanel = () => {
   return (
     <div className="min-h-screen bg-background">
       <AdminHeader onMenuToggle={() => setMenuOpen(true)} />
-      <AdminSidebar
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        onLogout={handleLogout}
-      />
+      <AdminSidebar open={menuOpen} onClose={() => setMenuOpen(false)} activeTab={activeTab} onTabChange={setActiveTab} onLogout={handleLogout} />
       <main className="pt-14 pb-8 px-4 md:px-6 max-w-6xl mx-auto mt-4">
         {renderTab()}
       </main>
