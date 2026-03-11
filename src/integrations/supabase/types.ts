@@ -73,10 +73,15 @@ export type Database = {
       creator_applications: {
         Row: {
           admin_notes: string | null
+          avatar_url: string | null
+          cover_url: string | null
+          cpf: string | null
           created_at: string
           document_back_url: string | null
           document_front_url: string | null
+          full_name: string | null
           id: string
+          phone: string | null
           reviewed_at: string | null
           selfie_url: string | null
           status: string
@@ -84,10 +89,15 @@ export type Database = {
         }
         Insert: {
           admin_notes?: string | null
+          avatar_url?: string | null
+          cover_url?: string | null
+          cpf?: string | null
           created_at?: string
           document_back_url?: string | null
           document_front_url?: string | null
+          full_name?: string | null
           id?: string
+          phone?: string | null
           reviewed_at?: string | null
           selfie_url?: string | null
           status?: string
@@ -95,10 +105,15 @@ export type Database = {
         }
         Update: {
           admin_notes?: string | null
+          avatar_url?: string | null
+          cover_url?: string | null
+          cpf?: string | null
           created_at?: string
           document_back_url?: string | null
           document_front_url?: string | null
+          full_name?: string | null
           id?: string
+          phone?: string | null
           reviewed_at?: string | null
           selfie_url?: string | null
           status?: string
@@ -454,6 +469,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          blocked: boolean
           category: string | null
           commission_rate: number | null
           cover_url: string | null
@@ -475,6 +491,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          blocked?: boolean
           category?: string | null
           commission_rate?: number | null
           cover_url?: string | null
@@ -496,6 +513,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          blocked?: boolean
           category?: string | null
           commission_rate?: number | null
           cover_url?: string | null
