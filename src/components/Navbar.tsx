@@ -90,6 +90,9 @@ const Navbar = () => {
           }
         </div>
         <div className="flex items-center gap-3">
+          <button onClick={toggleTheme} className="text-muted-foreground hover:text-foreground transition-colors p-1">
+            {theme === "dark" ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
+          </button>
           <NotificationBell className="text-muted-foreground hover:text-foreground transition-colors" />
           {user ?
           <button onClick={() => setMenuOpen(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground transition-colors">
