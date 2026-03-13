@@ -80,7 +80,7 @@ const Register = () => {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-6">
-          <img src={logoImg} alt="Logo" className="h-10 mx-auto mb-2" />
+          <img src={logoImg} alt="Logo" className="h-10 mx-auto mb-2 dark:invert" />
         </div>
 
         {/* Progress */}
