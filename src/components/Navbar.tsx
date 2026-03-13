@@ -20,6 +20,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, logout, isAdmin, isCreator } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const notificationCount = useUnreadNotifications();
 
