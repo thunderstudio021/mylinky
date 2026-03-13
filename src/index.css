@@ -61,7 +61,7 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: hsl(0 0% 18%);
+    background: hsl(220 13% 86%);
     border-radius: 3px;
   }
 }
