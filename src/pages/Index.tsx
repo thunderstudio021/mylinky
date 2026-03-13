@@ -83,7 +83,7 @@ const Index = () => {
                     <PostCard
                       key={post.id}
                       id={post.id}
-                      creator={{ name: profile?.name || "Criador", username: profile?.username || "", verified: profile?.verified || false }}
+                      creator={{ name: profile?.name || "Criador", username: profile?.username || "", verified: profile?.verified || false, avatar_url: profile?.avatar_url || "" }}
                       content={post.content}
                       image={post.media_type === "photo" ? post.media_url : undefined}
                       video={post.media_type === "video" ? post.media_url : undefined}
