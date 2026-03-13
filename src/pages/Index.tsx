@@ -59,8 +59,8 @@ const Index = () => {
     <div className="min-h-screen bg-background pt-14 md:pt-[72px] pb-20 md:pb-8">
       <div className="max-w-5xl mx-auto px-4 md:px-6">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-8">
-          <div>
-            <div className="flex justify-center md:justify-start gap-1 mb-6 border-b border-border">
+          <div className="max-w-[600px] w-full mx-auto lg:mx-0 lg:max-w-none">
+            <div className="flex justify-center gap-1 mb-6 border-b border-border">
               {tabs.map((tab) => (
                 <button key={tab} onClick={() => setActiveTab(tab)}
                   className={`px-5 py-2.5 text-sm transition-colors border-b-2 -mb-px ${
