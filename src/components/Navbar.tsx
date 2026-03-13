@@ -5,11 +5,12 @@ import {
   Home, Compass, User, Menu, X, LogIn, LogOut,
   Search, MessageCircle, UserPlus2, Link2, Users2,
   Wallet, Heart, Settings, HelpCircle, ArrowLeft, Shield, Pencil,
-  Bell, Plus } from
+  Bell, Plus, Sun, Moon } from
 "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import CreatePostModal from "@/components/CreatePostModal";
 import NotificationPanel, { useUnreadNotifications } from "@/components/NotificationPanel";
+import { useTheme } from "@/hooks/useTheme";
 import logoImg from "@/assets/logo.png";
 
 const Navbar = () => {
