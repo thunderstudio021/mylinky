@@ -5,11 +5,12 @@ import {
   Home, Compass, User, Menu, X, LogIn, LogOut,
   Search, MessageCircle, UserPlus2, Link2, Users2,
   Wallet, Heart, Settings, HelpCircle, ArrowLeft, Shield, Pencil,
-  Bell, Plus } from
+  Bell, Plus, Sun, Moon } from
 "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import CreatePostModal from "@/components/CreatePostModal";
 import NotificationPanel, { useUnreadNotifications } from "@/components/NotificationPanel";
+import { useTheme } from "@/hooks/useTheme";
 import logoImg from "@/assets/logo.png";
 
 const Navbar = () => {
@@ -19,6 +20,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, logout, isAdmin, isCreator } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const notificationCount = useUnreadNotifications();
 
@@ -60,7 +62,7 @@ const Navbar = () => {
       {/* Desktop top bar */}
       <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 h-14 items-center justify-between px-6 bg-background/80 backdrop-blur-md border-b border-border">
         <Link to="/" className="flex items-center">
-          <img src={logoImg} alt="Logo" className="h-7" />
+          <img src={logoImg} alt="Logo" className="h-7 dark:invert" />
         </Link>
         <div className="flex items-center gap-1">
           {[
@@ -88,6 +90,9 @@ const Navbar = () => {
           }
         </div>
         <div className="flex items-center gap-3">
+          <button onClick={toggleTheme} className="text-muted-foreground hover:text-foreground transition-colors p-1">
+            {theme === "dark" ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
+          </button>
           <NotificationBell className="text-muted-foreground hover:text-foreground transition-colors" />
           {user ?
           <button onClick={() => setMenuOpen(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -112,8 +117,11 @@ const Navbar = () => {
 
       {/* Mobile top */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 h-12 flex items-center justify-between px-4 bg-background/80 backdrop-blur-md border-b border-border">
-        <Link to="/" className="flex items-center"><img src={logoImg} alt="Logo" className="h-6" /></Link>
+        <Link to="/" className="flex items-center"><img src={logoImg} alt="Logo" className="h-6 dark:invert" /></Link>
         <div className="flex items-center gap-3">
+          <button onClick={toggleTheme} className="text-muted-foreground hover:text-foreground transition-colors p-1">
+            {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
           <NotificationBell className="text-muted-foreground hover:text-foreground transition-colors" />
           {!user &&
           <Link to="/login" className="text-sm font-medium text-foreground">Entrar</Link>
