@@ -1,5 +1,6 @@
 import PostCard from "@/components/PostCard";
 import CreatorCard from "@/components/CreatorCard";
+import BannerCarousel from "@/components/BannerCarousel";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
