@@ -37,6 +37,7 @@ const AdminSidebar = ({
     { id: "users", label: "Usuários", icon: Users },
     { id: "withdrawals", label: "Saques", icon: Wallet },
     { id: "posts", label: "Publicações", icon: FileText },
+    { id: "banners", label: "Banners", icon: Image },
   ];
 
   return (
