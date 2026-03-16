@@ -975,6 +975,138 @@ const DocImage = ({ label, url }: { label: string; url: string }) => (
   </div>
 );
 
+// ─── Banners Tab ───
+const BannersTab = () => {
+  const [banners, setBanners] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase.from("banners").select("*").order("position", { ascending: true });
+    setBanners(data || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleCreate = async () => {
+    if (!imageFile) { toast.error("Selecione uma imagem"); return; }
+    setUploading(true);
+    const ext = imageFile.name.split(".").pop();
+    const path = `banners/${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("media").upload(path, imageFile);
+    if (upErr) { toast.error("Erro ao enviar imagem"); setUploading(false); return; }
+    const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
+    const maxPos = banners.length > 0 ? Math.max(...banners.map(b => b.position)) + 1 : 0;
+    const { error } = await supabase.from("banners").insert({ image_url: urlData.publicUrl, link_url: linkUrl, position: maxPos });
+    if (error) { toast.error("Erro ao criar banner"); } else { toast.success("Banner criado!"); setImageFile(null); setLinkUrl(""); load(); }
+    setUploading(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    await supabase.from("banners").delete().eq("id", id);
+    toast.success("Banner removido");
+    load();
+  };
+
+  const handleMove = async (index: number, dir: -1 | 1) => {
+    const target = index + dir;
+    if (target < 0 || target >= banners.length) return;
+    const a = banners[index];
+    const b = banners[target];
+    await Promise.all([
+      supabase.from("banners").update({ position: b.position }).eq("id", a.id),
+      supabase.from("banners").update({ position: a.position }).eq("id", b.id),
+    ]);
+    load();
+  };
+
+  const toggleActive = async (id: string, active: boolean) => {
+    await supabase.from("banners").update({ active: !active }).eq("id", id);
+    load();
+  };
+
+  if (loading) return <LoadingState />;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Banners</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">Gerencie os banners do carrossel do feed</p>
+      </div>
+
+      {/* Create banner */}
+      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+        <h3 className="text-sm font-medium text-foreground">Novo banner</h3>
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Imagem do banner</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+            className="w-full text-sm text-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-secondary file:text-foreground hover:file:bg-secondary/80"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Link de redirecionamento</label>
+          <input
+            type="url"
+            value={linkUrl}
+            onChange={(e) => setLinkUrl(e.target.value)}
+            placeholder="https://exemplo.com"
+            className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+        <button
+          onClick={handleCreate}
+          disabled={uploading || !imageFile}
+          className="px-4 py-2 rounded-lg text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-50"
+        >
+          {uploading ? "Enviando..." : "Salvar banner"}
+        </button>
+      </div>
+
+      {/* Banner list */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-medium text-foreground">Banners ativos ({banners.length})</h3>
+        {banners.length === 0 && <p className="text-xs text-muted-foreground">Nenhum banner cadastrado.</p>}
+        {banners.map((b, i) => (
+          <div key={b.id} className="bg-card border border-border rounded-xl p-4 flex items-center gap-4">
+            <div className="w-28 h-16 rounded-lg overflow-hidden bg-secondary shrink-0">
+              <img src={b.image_url} alt="Banner" className="w-full h-full object-cover" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-muted-foreground truncate">{b.link_url || "Sem link"}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Posição: {i + 1}</p>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={() => handleMove(i, -1)} disabled={i === 0}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-30">
+                <ChevronRight className="w-4 h-4 rotate-[-90deg]" />
+              </button>
+              <button onClick={() => handleMove(i, 1)} disabled={i === banners.length - 1}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors disabled:opacity-30">
+                <ChevronRight className="w-4 h-4 rotate-90" />
+              </button>
+              <button onClick={() => toggleActive(b.id, b.active)}
+                className={`p-1.5 rounded-lg transition-colors ${b.active ? "text-foreground hover:bg-secondary" : "text-muted-foreground hover:bg-secondary"}`}>
+                <Eye className="w-4 h-4" />
+              </button>
+              <button onClick={() => handleDelete(b.id)}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-secondary transition-colors">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // ─── Main Admin Panel ───
 const AdminPanel = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -994,6 +1126,7 @@ const AdminPanel = () => {
       case "users": return <UsersTab />;
       case "withdrawals": return <WithdrawalsTab />;
       case "posts": return <PostsTab />;
+      case "banners": return <BannersTab />;
       default: return <DashboardTab />;
     }
   };
