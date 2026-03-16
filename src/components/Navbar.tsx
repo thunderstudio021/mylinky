@@ -90,8 +90,8 @@ const Navbar = () => {
           }
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={toggleTheme} className="text-muted-foreground hover:text-foreground transition-colors p-1">
-            {theme === "dark" ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
+          <button onClick={toggleTheme} className="relative text-muted-foreground hover:text-foreground transition-colors">
+            {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
           <NotificationBell className="text-muted-foreground hover:text-foreground transition-colors" />
           {user ?
