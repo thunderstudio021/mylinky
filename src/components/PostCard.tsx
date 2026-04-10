@@ -1,7 +1,7 @@
 import { Heart, MessageCircle, X, Play, Gift, MoreVertical, Pencil, Trash2, MessageSquareOff, Lock, Crown, Send, Loader2 } from "lucide-react";
 import { VerifiedBadge } from "./VerifiedBadge";
 import { AppAvatar } from "./AppAvatar";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import GiftModal from "./GiftModal";
@@ -79,9 +79,8 @@ const PostCard = ({
   const [localSubscribed, setLocalSubscribed] = useState(isSubscribed || false);
   const [localPurchased, setLocalPurchased] = useState(hasPurchased || false);
   const [likingInProgress, setLikingInProgress] = useState(false);
-  const [heartPos, setHeartPos] = useState<{ x: number; y: number } | null>(null);
-  const lastTapRef = useRef(0);
-  const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [floatingHearts, setFloatingHearts] = useState<{ id: number; x: number; size: number; delay: number }[]>([]);
+  const heartIdRef = useRef(0);
 
   // Comments state
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -157,6 +156,20 @@ const PostCard = ({
   const handleLike = async () => {
     if (!currentUserId || isContentLocked || likingInProgress) return;
     setLikingInProgress(true);
+    if (!liked) {
+      // Spawn 5 floating hearts with staggered offsets
+      const batch = Array.from({ length: 5 }, (_, i) => ({
+        id: ++heartIdRef.current,
+        x: (i - 2) * 9 + Math.random() * 6 - 3,
+        size: 10 + Math.random() * 6,
+        delay: i * 0.07,
+      }));
+      setFloatingHearts(prev => [...prev, ...batch]);
+      setTimeout(() => {
+        const ids = new Set(batch.map(h => h.id));
+        setFloatingHearts(prev => prev.filter(h => !ids.has(h.id)));
+      }, 1200);
+    }
     if (liked) {
       setLiked(false);
       setLikeCount(prev => Math.max(0, prev - 1));
@@ -168,29 +181,6 @@ const PostCard = ({
     }
     setLikingInProgress(false);
   };
-
-  // Double-tap to like
-  const handleMediaClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const now = Date.now();
-    const delta = now - lastTapRef.current;
-    lastTapRef.current = now;
-
-    if (delta < 300 && tapTimerRef.current !== null) {
-      clearTimeout(tapTimerRef.current);
-      tapTimerRef.current = null;
-      const rect = e.currentTarget.getBoundingClientRect();
-      const pos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      setHeartPos(pos);
-      setTimeout(() => setHeartPos(null), 700);
-      if (!liked && currentUserId && !isContentLocked) handleLike();
-    } else {
-      tapTimerRef.current = setTimeout(() => {
-        tapTimerRef.current = null;
-        if (isVideo) setVideoPlaying(true);
-        else setFullscreen(true);
-      }, 300);
-    }
-  }, [liked, isVideo, isContentLocked, currentUserId, handleLike]);
 
   // Comments
   const loadComments = async () => {
@@ -432,7 +422,7 @@ const PostCard = ({
               </div>
             )}
             {(image || video) && !isPoll && (
-              <div className="relative cursor-pointer" onClick={handleMediaClick}>
+              <div className="relative cursor-pointer" onClick={() => isVideo ? setVideoPlaying(true) : setFullscreen(true)}>
                 {isVideo ? (
                   <div className="relative w-full" style={{ aspectRatio: "9/16" }}>
                     <video src={video} className="w-full h-full object-cover" muted playsInline loop preload="metadata" />
@@ -451,22 +441,6 @@ const PostCard = ({
                     className="w-full block"
                   />
                 )}
-                {/* Double-tap heart */}
-                <AnimatePresence>
-                  {heartPos && (
-                    <motion.div
-                      key="dbl-heart"
-                      className="absolute pointer-events-none z-10"
-                      style={{ left: heartPos.x, top: heartPos.y, x: "-50%", y: "-50%" }}
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: [0, 1.35, 1.0], opacity: [0, 1, 1] }}
-                      exit={{ scale: 0.9, opacity: 0, transition: { duration: 0.22 } }}
-                      transition={{ duration: 0.38, ease: [0.23, 1, 0.32, 1] }}
-                    >
-                      <Heart className="w-20 h-20 fill-white text-white" style={{ filter: "drop-shadow(0 2px 12px rgba(0,0,0,0.45))" }} />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
             )}
           </>
@@ -474,8 +448,24 @@ const PostCard = ({
 
         {/* Actions */}
         <div className="flex items-center gap-5 px-4 py-3">
-          <button onClick={handleLike} className="flex items-center gap-1.5" disabled={likingInProgress}>
-            <Heart className={`w-[18px] h-[18px] transition-colors ${liked ? "fill-accent text-accent" : "text-muted-foreground hover:text-foreground"}`} />
+          <button onClick={handleLike} className="relative flex items-center gap-1.5" disabled={likingInProgress}>
+            {/* Floating hearts */}
+            {floatingHearts.map(h => (
+              <motion.div
+                key={h.id}
+                className="absolute pointer-events-none"
+                style={{ left: "50%", bottom: "100%" }}
+                initial={{ y: 0, x: h.x, opacity: 1, scale: 0.6 }}
+                animate={{ y: -52, x: h.x + (Math.random() > 0.5 ? 4 : -4), opacity: 0, scale: 1 }}
+                transition={{ duration: 0.85, delay: h.delay, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <Heart
+                  className="fill-accent text-accent"
+                  style={{ width: h.size, height: h.size }}
+                />
+              </motion.div>
+            ))}
+            <Heart className={`w-[18px] h-[18px] transition-all duration-150 ${liked ? "fill-accent text-accent scale-110" : "text-muted-foreground hover:text-foreground"}`} />
             <span className="text-xs text-muted-foreground">{likeCount}</span>
           </button>
           <button onClick={handleOpenComments} className={`flex items-center gap-1.5 transition-colors ${!localCommentsEnabled && !isOwner && !isAdmin ? "opacity-40 cursor-not-allowed" : "text-muted-foreground hover:text-foreground"}`}>
