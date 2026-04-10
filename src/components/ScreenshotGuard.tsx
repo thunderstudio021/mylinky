@@ -1,112 +1,114 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 /**
- * Screenshot / screen-capture protection.
+ * Screenshot protection.
  *
- * Vectors covered:
- *  1. PrintScreen key (Windows/Linux desktop)
- *  2. Cmd+Shift+3 / Cmd+Shift+4 / Cmd+Shift+5 (macOS)
- *  3. Windows Snipping Tool shortcut (Win+Shift+S)
- *  4. Screen recording / screen share → visibilitychange: hidden
- *  5. Tab backgrounded / app switched → visibilitychange: hidden
- *  6. Window blur (notification centre, control centre iOS, etc.)
- *  7. CSS: blocks right-click → Save Image on desktop
- *  8. CSS: blocks long-press Save on iOS/Android (-webkit-touch-callout)
- *  9. CSS: blocks drag-to-desktop save (-webkit-user-drag)
+ * The overlay is ALWAYS in the DOM (display:none) and toggled via direct
+ * DOM manipulation — zero React re-render delay, so iOS can capture it
+ * before the framebuffer is flushed to the screenshot.
  *
- * About iOS physical button (power + volume):
- *  The only 100% reliable interception requires a native app shell
- *  (Capacitor / React Native) that wraps this web app and calls
- *  UIApplication.userDidTakeScreenshotNotification at OS level.
- *  Safari alone does not expose this event to JavaScript.
+ * Triggers:
+ *   • window blur  ← iOS briefly blurs the webview when power+volume fires
+ *   • visibilitychange hidden  ← screen recording / app switch
+ *   • keydown PrintScreen / Cmd+Shift+3-5 / Win+Shift+S  ← desktop
  */
 export const ScreenshotGuard = () => {
   const { settings } = useSiteSettings();
-  const [visible, setVisible] = useState(false);
-
-  const show = useCallback(() => setVisible(true), []);
-  const hide = useCallback(() => setVisible(false), []);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // 1-3: keyboard shortcuts
-    const onKeyDown = (e: KeyboardEvent) => {
-      const isPrintScreen = e.key === "PrintScreen";
-      const isMacShot =
-        e.metaKey && e.shiftKey && ["3", "4", "5"].includes(e.key);
-      const isWinSnip =
-        e.metaKey && e.shiftKey && e.key === "s"; // Win+Shift+S
-      const isAltPrintScreen =
-        e.altKey && e.key === "PrintScreen";
+    const el = overlayRef.current;
+    if (!el) return;
 
-      if (isPrintScreen || isMacShot || isWinSnip || isAltPrintScreen) {
+    // Direct DOM toggle — no React state, no render cycle, instant
+    const show = () => { el.style.display = "flex"; };
+    const hide = () => { el.style.display = "none"; };
+
+    // iOS / Android: blur fires when power+volume steals focus
+    window.addEventListener("blur", show);
+    window.addEventListener("focus", hide);
+
+    // Screen recording, app switch, tab background
+    const onVisibility = () => {
+      document.visibilityState === "hidden" ? show() : hide();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    // Desktop keyboard shortcuts
+    const onKeyDown = (e: KeyboardEvent) => {
+      const isShot =
+        e.key === "PrintScreen" ||
+        e.key === "Snapshot" ||
+        (e.altKey && e.key === "PrintScreen") ||
+        (e.metaKey && e.shiftKey && ["3", "4", "5"].includes(e.key)) ||
+        (e.metaKey && e.shiftKey && e.key.toLowerCase() === "s");
+
+      if (isShot) {
         e.preventDefault();
-        // Wipe clipboard so the capture is blank
         navigator.clipboard.writeText("").catch(() => {});
         show();
+        setTimeout(hide, 3000);
       }
     };
-
-    // 4-5: screen recording / tab background / app switch
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") show();
-    };
-
-    // 6: window blur (iOS control/notification centre, app switcher)
-    const onBlur = () => show();
-    const onFocus = () => hide();
-
     document.addEventListener("keydown", onKeyDown);
-    document.addEventListener("visibilitychange", onVisibility);
-    document.addEventListener("visibilitychange", (e) => {
-      if (document.visibilityState === "visible") hide();
-    });
-    window.addEventListener("blur", onBlur);
-    window.addEventListener("focus", onFocus);
 
     return () => {
-      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("blur", show);
+      window.removeEventListener("focus", hide);
       document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("blur", onBlur);
-      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("keydown", onKeyDown);
     };
-  }, [show, hide]);
+  }, []);
+
+  const logoStyle: React.CSSProperties = {
+    height: 40,
+    width: "auto",
+    objectFit: "contain",
+    filter: "brightness(0) invert(1)",
+    pointerEvents: "none",
+  };
 
   return (
     <>
-      {/* The always-present CSS layer — blocks right-click on images globally */}
+      {/* CSS: block long-press save (iOS) + drag save (desktop) on all media */}
       <style>{`
         img, video {
           -webkit-touch-callout: none !important;
           -webkit-user-drag: none !important;
           user-select: none !important;
+          -webkit-user-select: none !important;
         }
       `}</style>
 
-      {/* JS-triggered full-screen overlay */}
-      {visible && (
-        <div
-          className="fixed inset-0 z-[99999] bg-black flex flex-col items-center justify-center gap-4 select-none"
-          onContextMenu={(e) => e.preventDefault()}
-          onClick={hide}
-        >
-          {settings.logo_url ? (
-            <img
-              src={settings.logo_url}
-              alt=""
-              className="h-10 w-auto object-contain pointer-events-none"
-              style={{ filter: "brightness(0) invert(1)" }}
-            />
-          ) : (
-            <span className="text-white font-bold text-2xl tracking-tight">
-              mylinky<span className="text-accent">.</span>
-            </span>
-          )}
-          <p className="text-white font-bold text-center text-base leading-snug">
-            Esse conteúdo é<br />protegido
-          </p>
-        </div>
-      )}
+      {/* Overlay — in DOM from the start, toggled instantly via style.display */}
+      <div
+        ref={overlayRef}
+        onContextMenu={(e) => e.preventDefault()}
+        style={{
+          display: "none",
+          position: "fixed",
+          inset: 0,
+          zIndex: 999999,
+          background: "black",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 16,
+          userSelect: "none",
+        }}
+      >
+        {settings.logo_url ? (
+          <img src={settings.logo_url} alt="" style={logoStyle} />
+        ) : (
+          <span style={{ color: "white", fontWeight: 700, fontSize: 24, letterSpacing: "-0.5px" }}>
+            mylinky<span style={{ color: "hsl(var(--accent))" }}>.</span>
+          </span>
+        )}
+        <p style={{ color: "white", fontWeight: 700, textAlign: "center", fontSize: 15, lineHeight: 1.4, margin: 0 }}>
+          Esse conteúdo é<br />protegido
+        </p>
+      </div>
     </>
   );
 };
