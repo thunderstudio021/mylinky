@@ -51,10 +51,11 @@ const BannerCarousel = () => {
 
   const banner = banners[current];
 
+  // Subtle slide + fade — enter from the side, exit to the opposite side
   const variants = {
-    enter: (dir: number) => ({ x: dir > 0 ? "100%" : "-100%", opacity: 0 }),
+    enter: (dir: number) => ({ x: dir > 0 ? "10%" : "-10%", opacity: 0 }),
     center: { x: 0, opacity: 1 },
-    exit: (dir: number) => ({ x: dir > 0 ? "-100%" : "100%", opacity: 0 }),
+    exit: (dir: number) => ({ x: dir > 0 ? "-10%" : "10%", opacity: 0 }),
   };
 
   const handleClick = () => {
@@ -66,7 +67,8 @@ const BannerCarousel = () => {
   return (
     <div className="relative w-full rounded-xl overflow-hidden bg-secondary border border-border group">
       <div className="relative aspect-[16/5] md:aspect-[16/4] overflow-hidden">
-        <AnimatePresence custom={direction} mode="popLayout">
+        {/* initial={false} → first banner appears instantly, no entrance animation */}
+        <AnimatePresence custom={direction} mode="popLayout" initial={false}>
           <motion.div
             key={banner.id}
             custom={direction}
@@ -74,16 +76,17 @@ const BannerCarousel = () => {
             initial="enter"
             animate="center"
             exit="exit"
-            transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+            transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
             className="absolute inset-0 cursor-pointer"
             onClick={handleClick}
           >
             <LazyImage
               src={banner.image_url}
               alt="Banner"
-              className="w-full h-full object-cover"
+              className="w-full h-full"
               width={1200}
               quality={80}
+              objectFit="cover"
               draggable={false}
             />
           </motion.div>
@@ -115,8 +118,8 @@ const BannerCarousel = () => {
             <button
               key={i}
               onClick={() => { setDirection(i > current ? 1 : -1); setCurrent(i); }}
-              className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-                i === current ? "bg-white w-4" : "bg-white/50"
+              className={`h-1.5 rounded-full transition-all duration-400 ${
+                i === current ? "bg-white w-5" : "bg-white/50 w-1.5"
               }`}
             />
           ))}
