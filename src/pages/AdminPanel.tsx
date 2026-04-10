@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { toast } from "sonner";
@@ -13,8 +13,10 @@ import {
   ChevronRight, Search, CheckCircle, XCircle, Eye, Pencil,
   Trash2, Ban, TrendingUp, Image, Video, UserCheck,
   ArrowLeft, Save, Percent, LogOut, Heart, Gift, UserX, Unlock,
+  Settings2, Upload, Palette, Globe, Users2,
 } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { useSiteSettings, applyPrimaryColor, hexToHsl, hslToHex, SITE_DEFAULTS } from "@/hooks/useSiteSettings";
 
 // ─── Admin Header ───
 const AdminHeader = ({ onMenuToggle }: { onMenuToggle: () => void }) => (
@@ -41,6 +43,8 @@ const AdminSidebar = ({
     { id: "withdrawals", label: "Saques", icon: Wallet },
     { id: "posts", label: "Publicações", icon: FileText },
     { id: "banners", label: "Banners", icon: Image },
+    { id: "affiliates-admin", label: "Afiliados", icon: Users2 },
+    { id: "configuracoes", label: "Configurações", icon: Settings2 },
   ];
 
   return (
@@ -1092,6 +1096,295 @@ const BannersTab = () => {
   );
 };
 
+// ─── Affiliates Admin Tab ────────────────────────────────────────────────────
+const AffiliatesAdminTab = () => {
+  const [affiliates, setAffiliates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data } = await (supabase as any)
+          .from("affiliate_relationships")
+          .select("*, affiliate:profiles!affiliate_id(name, username, avatar_url), creator:profiles!creator_id(name, username, avatar_url)")
+          .order("created_at", { ascending: false });
+        setAffiliates(data || []);
+      } catch {
+        setAffiliates([]);
+      }
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const filtered = affiliates.filter(a =>
+    !search ||
+    a.affiliate?.name?.toLowerCase().includes(search.toLowerCase()) ||
+    a.creator?.name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Afiliados</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">Visão geral de todas as afiliações ativas na plataforma</p>
+      </div>
+
+      {loading ? <LoadingState /> : (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="bg-card border border-border rounded-xl p-4 text-center">
+              <p className="text-2xl font-bold text-foreground">{affiliates.length}</p>
+              <p className="text-xs text-muted-foreground mt-1">Afiliações totais</p>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-4 text-center">
+              <p className="text-2xl font-bold text-foreground">{affiliates.filter(a => a.status === "active").length}</p>
+              <p className="text-xs text-muted-foreground mt-1">Ativas</p>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-4 text-center">
+              <p className="text-2xl font-bold text-foreground">{new Set(affiliates.map(a => a.affiliate_id)).size}</p>
+              <p className="text-xs text-muted-foreground mt-1">Afiliados únicos</p>
+            </div>
+          </div>
+
+          <div>
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar afiliado ou criador..."
+                className="w-full pl-9 pr-3 py-2.5 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none"
+              />
+            </div>
+
+            {filtered.length === 0 ? (
+              <div className="bg-card border border-border rounded-xl p-8 text-center">
+                <p className="text-sm text-muted-foreground">
+                  {affiliates.length === 0
+                    ? "Nenhuma afiliação ainda. Execute o SQL de migração no Supabase para ativar esta funcionalidade."
+                    : "Nenhuma afiliação encontrada para esta busca."}
+                </p>
+              </div>
+            ) : (
+              <div className="bg-card border border-border rounded-xl divide-y divide-border">
+                {filtered.map(a => (
+                  <div key={a.id} className="flex items-center justify-between px-4 py-3 gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <AppAvatar src={a.affiliate?.avatar_url} name={a.affiliate?.name ?? "?"} className="w-8 h-8 shrink-0" sizePx={64} textClassName="text-xs" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-foreground truncate">{a.affiliate?.name}</p>
+                        <p className="text-[10px] text-muted-foreground">afiliado</p>
+                      </div>
+                    </div>
+                    <span className="text-muted-foreground text-xs shrink-0">→</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <AppAvatar src={a.creator?.avatar_url} name={a.creator?.name ?? "?"} className="w-8 h-8 shrink-0" sizePx={64} textClassName="text-xs" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-foreground truncate">{a.creator?.name}</p>
+                        <p className="text-[10px] text-muted-foreground">criador</p>
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${a.status === "active" ? "bg-emerald-500/10 text-emerald-400" : "bg-secondary text-muted-foreground"}`}>
+                        {a.status === "active" ? "ativo" : a.status}
+                      </span>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{a.commission_rate ?? 20}% comissão</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+// ─── Configurações Tab ────────────────────────────────────────────────────────
+const TikTokIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.28 6.28 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.2 8.2 0 004.79 1.53V6.77a4.85 4.85 0 01-1.02-.08z" />
+  </svg>
+);
+
+const ConfiguracoesTab = () => {
+  const { settings, refresh } = useSiteSettings();
+  const [form, setForm] = useState({ ...SITE_DEFAULTS });
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setForm({ ...SITE_DEFAULTS, ...settings }); }, [settings]);
+
+  const set = (k: string, v: string) => setForm(prev => ({ ...prev, [k]: v }));
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `logo/logo.${ext}`;
+    await supabase.storage.from("media").remove([path]);
+    const { error } = await supabase.storage.from("media").upload(path, file, { upsert: true });
+    if (error) { toast.error("Erro ao enviar logo"); setUploading(false); return; }
+    const { data } = supabase.storage.from("media").getPublicUrl(path);
+    set("logo_url", data.publicUrl + `?t=${Date.now()}`);
+    setUploading(false);
+    toast.success("Logo enviada!");
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("site_settings")
+        .upsert({ id: (settings as any).id, ...form }, { onConflict: "id" });
+      if (error) throw error;
+      applyPrimaryColor(form.primary_color_light, form.primary_color_dark);
+      refresh();
+      toast.success("Configurações salvas!");
+    } catch (err: any) {
+      toast.error(err.message?.includes("does not exist")
+        ? "Execute o SQL de migração no Supabase primeiro."
+        : err.message || "Erro ao salvar");
+    }
+    setSaving(false);
+  };
+
+  const SectionTitle = ({ icon: Icon, title }: { icon: any; title: string }) => (
+    <div className="flex items-center gap-2 mb-4">
+      <Icon className="w-4 h-4 text-muted-foreground" />
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Configurações do Site</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">Personalize logo, cores e redes sociais da plataforma</p>
+      </div>
+
+      {/* ── Logo ── */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <SectionTitle icon={Upload} title="Logotipo" />
+        <div className="flex items-center gap-4">
+          <div className="w-20 h-20 rounded-xl bg-secondary border border-border flex items-center justify-center overflow-hidden shrink-0">
+            {form.logo_url
+              ? <img src={form.logo_url} alt="Logo" className="w-full h-full object-contain p-2 dark:invert" />
+              : <span className="text-xs text-muted-foreground">Sem logo</span>
+            }
+          </div>
+          <div className="space-y-2">
+            <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+            <button
+              onClick={() => logoInputRef.current?.click()}
+              disabled={uploading}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-secondary border border-border rounded-lg hover:bg-secondary/70 transition-colors disabled:opacity-50"
+            >
+              <Upload className="w-4 h-4" />
+              {uploading ? "Enviando..." : "Escolher imagem"}
+            </button>
+            <p className="text-xs text-muted-foreground">PNG ou SVG recomendado. Fundo transparente.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Cores Primárias ── */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <SectionTitle icon={Palette} title="Cor Primária" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {[
+            { label: "Modo Claro", key: "primary_color_light" },
+            { label: "Modo Escuro", key: "primary_color_dark" },
+          ].map(({ label, key }) => {
+            const hsl = (form as any)[key] as string;
+            const hex = hslToHex(hsl);
+            return (
+              <div key={key}>
+                <label className="text-xs text-muted-foreground mb-2 block">{label}</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={hex}
+                    onChange={e => {
+                      const newHsl = hexToHsl(e.target.value);
+                      set(key, newHsl);
+                      applyPrimaryColor(
+                        key === "primary_color_light" ? newHsl : form.primary_color_light,
+                        key === "primary_color_dark" ? newHsl : form.primary_color_dark,
+                      );
+                    }}
+                    className="w-10 h-10 rounded-lg border border-border cursor-pointer bg-transparent p-0.5"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{hex}</p>
+                    <p className="text-[10px] text-muted-foreground font-mono">{hsl}</p>
+                  </div>
+                  <div className="ml-auto w-8 h-8 rounded-full border border-border" style={{ backgroundColor: hex }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-xs text-muted-foreground mt-3">A cor é aplicada em botões, links e destaques do sistema.</p>
+      </div>
+
+      {/* ── Redes Sociais ── */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <SectionTitle icon={Globe} title="Redes Sociais" />
+        <p className="text-xs text-muted-foreground mb-4">Links exibidos no footer. Deixe em branco para ocultar o ícone.</p>
+        <div className="space-y-3">
+          {[
+            { key: "instagram_url", label: "Instagram", placeholder: "https://instagram.com/seuperfil" },
+            { key: "tiktok_url", label: "TikTok", placeholder: "https://tiktok.com/@seuperfil" },
+            { key: "twitter_url", label: "Twitter / X", placeholder: "https://twitter.com/seuperfil" },
+            { key: "facebook_url", label: "Facebook", placeholder: "https://facebook.com/seuperfil" },
+            { key: "youtube_url", label: "YouTube", placeholder: "https://youtube.com/@seucanal" },
+            { key: "whatsapp_url", label: "WhatsApp", placeholder: "https://wa.me/5511999999999" },
+          ].map(({ key, label, placeholder }) => (
+            <div key={key} className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground w-24 shrink-0">{label}</span>
+              <input
+                type="url"
+                value={(form as any)[key]}
+                onChange={e => set(key, e.target.value)}
+                placeholder={placeholder}
+                className="flex-1 px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-muted-foreground/30"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Texto do Footer ── */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <SectionTitle icon={FileText} title="Texto do Rodapé" />
+        <input
+          type="text"
+          value={form.footer_text}
+          onChange={e => set("footer_text", e.target.value)}
+          placeholder={`© ${new Date().getFullYear()} Todos os direitos reservados.`}
+          className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-muted-foreground/30"
+        />
+      </div>
+
+      {/* ── Salvar ── */}
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium bg-foreground text-background rounded-lg hover:bg-foreground/90 transition-colors disabled:opacity-50"
+      >
+        <Save className="w-4 h-4" />
+        {saving ? "Salvando..." : "Salvar configurações"}
+      </button>
+    </div>
+  );
+};
+
 // ─── Main Admin Panel ───
 const AdminPanel = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1112,6 +1405,8 @@ const AdminPanel = () => {
       case "withdrawals": return <WithdrawalsTab />;
       case "posts": return <PostsTab />;
       case "banners": return <BannersTab />;
+      case "affiliates-admin": return <AffiliatesAdminTab />;
+      case "configuracoes": return <ConfiguracoesTab />;
       default: return <DashboardTab />;
     }
   };

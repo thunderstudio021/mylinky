@@ -4,7 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { SiteSettingsProvider } from "@/hooks/useSiteSettings";
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 import Index from "./pages/Index";
 import Explore from "./pages/Explore";
 import Search from "./pages/Search";
@@ -62,6 +64,7 @@ const AppRoutes = () => (
       <Route path="/:username" element={<CreatorProfile />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
+    <Footer />
   </>
 );
 
@@ -77,7 +80,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
+          <SiteSettingsProvider>
+            <AppRoutes />
+          </SiteSettingsProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
