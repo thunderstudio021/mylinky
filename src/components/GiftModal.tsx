@@ -45,7 +45,7 @@ const GiftModal = ({ open, onClose, creatorName, onConfirm }: GiftModalProps) =>
   return (
     <AnimatePresence>
       {open && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] flex items-center justify-center">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[999] flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60" onClick={handleClose} />
           <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative w-full max-w-sm mx-4 bg-card border border-border rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
