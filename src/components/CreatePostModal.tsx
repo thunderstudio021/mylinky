@@ -17,7 +17,6 @@ const postTypeOptions: { value: PostType; label: string; icon: any; description:
   { value: "free", label: "Público", icon: Eye, description: "Visível para todos" },
   { value: "subscribers", label: "Assinantes", icon: Crown, description: "Somente para assinantes" },
   { value: "ppv", label: "Pague para ver", icon: DollarSign, description: "Defina um valor para desbloquear" },
-  { value: "ppv-subscribers", label: "Assinantes + Pago", icon: Lock, description: "Assinantes pagam para ver" },
 ];
 
 const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
