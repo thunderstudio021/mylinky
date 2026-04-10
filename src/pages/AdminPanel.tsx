@@ -636,6 +636,7 @@ const UsersTab = () => {
   const [editing, setEditing] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
   const [userRole, setUserRole] = useState<"usuario" | "criador" | "admin">("usuario");
+  const [commissionRate, setCommissionRate] = useState<number>(10);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -647,11 +648,11 @@ const UsersTab = () => {
   useEffect(() => { load(); }, [load]);
 
   const openEdit = async (u: any) => {
-    // Load current role
     const { data: roleData } = await (supabase as any).from("user_roles").select("role").eq("user_id", u.id).maybeSingle();
     if (roleData?.role === "admin") setUserRole("admin");
     else if (u.is_creator) setUserRole("criador");
     else setUserRole("usuario");
+    setCommissionRate(u.commission_rate ?? 10);
     setEditing(u);
   };
 
@@ -674,13 +675,14 @@ const UsersTab = () => {
     if (!editing) return;
     setSaving(true);
 
-    // 1. Update profile fields + is_creator
+    // 1. Update profile fields + is_creator + commission_rate
     const { error } = await supabase.from("profiles").update({
       name: editing.name,
       username: editing.username,
       bio: editing.bio,
       is_creator: userRole === "criador",
       verified: userRole === "criador" ? true : editing.verified,
+      commission_rate: commissionRate,
     }).eq("id", editing.id);
     if (error) { toast.error("Erro: " + error.message); setSaving(false); return; }
 
@@ -747,6 +749,27 @@ const UsersTab = () => {
                   <span className="text-[10px] text-muted-foreground">{opt.desc}</span>
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Referral commission rate */}
+          <div>
+            <label className="text-xs text-muted-foreground mb-2 block">
+              Comissão de indicação (%)
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min={0}
+                max={50}
+                step={1}
+                value={commissionRate}
+                onChange={e => setCommissionRate(Math.min(50, Math.max(0, Number(e.target.value))))}
+                className="w-24 bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"
+              />
+              <p className="text-xs text-muted-foreground leading-tight">
+                do faturamento do criador vai para quem o indicou
+              </p>
             </div>
           </div>
 

@@ -215,7 +215,6 @@ const Navbar = () => {
                 <div className="border-t border-border my-2" />
                 <p className="text-[11px] font-semibold text-muted-foreground px-3 py-1.5 uppercase tracking-wider">Colaborações</p>
                 <MenuItem icon={Link2} label="Indicação" onClick={() => { navigate("/referral"); setMenuOpen(false); }} />
-                <MenuItem icon={Users2} label="Afiliações" onClick={() => { navigate("/affiliates"); setMenuOpen(false); }} />
 
                 {(isCreator || isAdmin) && (
                   <>

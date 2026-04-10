@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { SiteSettingsProvider } from "@/hooks/useSiteSettings";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import { ScreenshotGuard } from "./components/ScreenshotGuard";
@@ -44,7 +46,30 @@ const AuthRoute = ({ children }: { children: React.ReactNode }) => {
   return user ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
-const AppRoutes = () => (
+// After signup, link the new user to whoever referred them
+const useReferralCapture = () => {
+  const { user } = useAuth();
+  useEffect(() => {
+    if (!user) return;
+    const ref = sessionStorage.getItem("pendingReferral");
+    if (!ref) return;
+    sessionStorage.removeItem("pendingReferral");
+    // Look up the referrer by username and create the relationship
+    supabase.from("profiles").select("id, commission_rate").eq("username", ref).maybeSingle()
+      .then(({ data: referrer }) => {
+        if (!referrer || referrer.id === user.id) return;
+        (supabase as any).from("referral_relationships").insert({
+          referrer_id: referrer.id,
+          referred_id: user.id,
+          commission_rate: referrer.commission_rate ?? 10,
+        }).then(() => {});
+      });
+  }, [user]);
+};
+
+const AppRoutes = () => {
+  useReferralCapture();
+  return (
   <>
     <Navbar />
     <Routes>
@@ -68,7 +93,8 @@ const AppRoutes = () => (
     </Routes>
     <Footer />
   </>
-);
+  );
+};
 
 const SupportRedirect = () => {
   window.location.href = "https://wa.me/5521966555534";

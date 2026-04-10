@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, Loader2, ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -26,6 +26,13 @@ const Register = () => {
 
   const { signup } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Persist referral code across the multi-step form
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) sessionStorage.setItem("pendingReferral", ref);
+  }, []);
 
   const formatWhatsapp = (value: string) => {
     const digits = value.replace(/\D/g, "").slice(0, 11);
