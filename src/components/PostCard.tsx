@@ -1,4 +1,4 @@
-import { Heart, MessageCircle, X, Play, Gift, MoreVertical, Pencil, Trash2, MessageSquareOff, Lock, Crown, Send, Loader2 } from "lucide-react";
+import { Heart, MessageCircle, X, Play, Gift, MoreVertical, Pencil, Trash2, MessageSquareOff, Crown, Send, Loader2 } from "lucide-react";
 import { VerifiedBadge } from "./VerifiedBadge";
 import { AppAvatar } from "./AppAvatar";
 import { useState, useEffect, useRef } from "react";
@@ -10,6 +10,7 @@ import SubscribeModal from "./SubscribeModal";
 import PaymentModal from "./PaymentModal";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 const FullscreenOverlay = ({ onClose, children }: { onClose: () => void; children: React.ReactNode }) => {
   useEffect(() => {
@@ -66,6 +67,7 @@ const PostCard = ({
   onDelete, onEdit, type, price, creatorId, creatorPriceMonthly, creatorPriceYearly, onUnlocked,
   commentsEnabled = true,
 }: PostCardProps) => {
+  const { settings } = useSiteSettings();
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(likes);
   const [commentCount, setCommentCount] = useState(comments);
@@ -362,40 +364,48 @@ const PostCard = ({
                 <div className="space-y-2"><div className="h-10 rounded-lg bg-secondary" /><div className="h-10 rounded-lg bg-secondary" /></div>
               </div>
             )}
-            {!image && !video && !isPoll && <div className="h-32 bg-secondary/30" />}
-            <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex flex-col items-center justify-center gap-3 p-6">
-              <div className="w-10 h-10 rounded-full bg-secondary/80 flex items-center justify-center">
-                <Lock className="w-5 h-5 text-muted-foreground" />
+            {!image && !video && !isPoll && <div className="h-48 bg-secondary/30" />}
+            {/* Privacy overlay — logo + protected text */}
+            <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-5 p-6">
+              <div className="flex flex-col items-center gap-2">
+                {settings.logo_url ? (
+                  <img
+                    src={settings.logo_url}
+                    alt=""
+                    className="h-9 w-auto object-contain"
+                    style={{ filter: "brightness(0) invert(1) drop-shadow(0 1px 6px rgba(0,0,0,0.5))" }}
+                  />
+                ) : (
+                  <span className="text-white font-bold text-2xl tracking-tight" style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>
+                    mylinky<span className="text-accent">.</span>
+                  </span>
+                )}
+                <p className="text-white font-bold text-center text-[15px] leading-snug" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
+                  Esse conteúdo é<br />protegido
+                </p>
               </div>
+
+              {/* Unlock actions */}
               {type === "subscribers" && (
-                <>
-                  <p className="text-sm text-foreground font-medium text-center">Conteúdo exclusivo para assinantes</p>
-                  <button onClick={() => setSubscribeOpen(true)} className="flex items-center gap-1.5 px-5 py-2 text-sm font-medium rounded-full bg-foreground text-background hover:bg-foreground/90 transition-colors">
-                    <Crown className="w-3.5 h-3.5" /> Assinar por R${Number(creatorPriceMonthly || 0).toFixed(2)}/mês
-                  </button>
-                </>
+                <button onClick={() => setSubscribeOpen(true)} className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold rounded-full bg-white text-black hover:bg-white/90 transition-colors shadow-lg">
+                  <Crown className="w-3.5 h-3.5" /> Assinar por R${Number(creatorPriceMonthly || 0).toFixed(2)}/mês
+                </button>
               )}
               {type === "ppv" && (
-                <>
-                  <p className="text-sm text-foreground font-medium text-center">Conteúdo pago</p>
-                  <button onClick={() => setPaymentOpen(true)} className="px-5 py-2 text-sm font-medium rounded-full bg-foreground text-background hover:bg-foreground/90 transition-colors">
-                    Desbloquear por R${Number(price || 0).toFixed(2)}
-                  </button>
-                </>
+                <button onClick={() => setPaymentOpen(true)} className="px-5 py-2.5 text-sm font-semibold rounded-full bg-white text-black hover:bg-white/90 transition-colors shadow-lg">
+                  Desbloquear por R${Number(price || 0).toFixed(2)}
+                </button>
               )}
               {type === "ppv-subscribers" && (
-                <>
-                  <p className="text-sm text-foreground font-medium text-center">Conteúdo exclusivo</p>
-                  <div className="flex flex-col gap-2 items-center">
-                    <button onClick={() => setSubscribeOpen(true)} className="flex items-center gap-1.5 px-5 py-2 text-sm font-medium rounded-full bg-foreground text-background hover:bg-foreground/90 transition-colors">
-                      <Crown className="w-3.5 h-3.5" /> Assinar por R${Number(creatorPriceMonthly || 0).toFixed(2)}/mês
-                    </button>
-                    <span className="text-xs text-muted-foreground">ou</span>
-                    <button onClick={() => setPaymentOpen(true)} className="px-5 py-2 text-sm font-medium rounded-full border border-foreground/20 text-foreground hover:bg-secondary transition-colors">
-                      Pagar R${Number(price || 0).toFixed(2)} uma vez
-                    </button>
-                  </div>
-                </>
+                <div className="flex flex-col gap-2 items-center">
+                  <button onClick={() => setSubscribeOpen(true)} className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold rounded-full bg-white text-black hover:bg-white/90 transition-colors shadow-lg">
+                    <Crown className="w-3.5 h-3.5" /> Assinar por R${Number(creatorPriceMonthly || 0).toFixed(2)}/mês
+                  </button>
+                  <span className="text-white/60 text-xs">ou</span>
+                  <button onClick={() => setPaymentOpen(true)} className="px-5 py-2 text-sm font-medium rounded-full border border-white/30 text-white hover:bg-white/10 transition-colors">
+                    Pagar R${Number(price || 0).toFixed(2)} uma vez
+                  </button>
+                </div>
               )}
             </div>
           </div>
