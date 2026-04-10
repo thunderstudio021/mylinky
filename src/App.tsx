@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { SiteSettingsProvider } from "@/hooks/useSiteSettings";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import { ScreenshotGuard } from "./components/ScreenshotGuard";
 import Index from "./pages/Index";
 import Explore from "./pages/Explore";
 import Search from "./pages/Search";
@@ -82,6 +83,7 @@ const App = () => (
         <AuthProvider>
           <SiteSettingsProvider>
             <AppRoutes />
+            <ScreenshotGuard />
           </SiteSettingsProvider>
         </AuthProvider>
       </BrowserRouter>

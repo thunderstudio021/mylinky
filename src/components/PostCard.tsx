@@ -365,25 +365,20 @@ const PostCard = ({
               </div>
             )}
             {!image && !video && !isPoll && <div className="h-48 bg-secondary/30" />}
-            {/* Privacy overlay — logo + protected text */}
+            {/* Locked overlay — logo + unlock button only */}
             <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-5 p-6">
-              <div className="flex flex-col items-center gap-2">
-                {settings.logo_url ? (
-                  <img
-                    src={settings.logo_url}
-                    alt=""
-                    className="h-9 w-auto object-contain"
-                    style={{ filter: "brightness(0) invert(1) drop-shadow(0 1px 6px rgba(0,0,0,0.5))" }}
-                  />
-                ) : (
-                  <span className="text-white font-bold text-2xl tracking-tight" style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>
-                    mylinky<span className="text-accent">.</span>
-                  </span>
-                )}
-                <p className="text-white font-bold text-center text-[15px] leading-snug" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
-                  Esse conteúdo é<br />protegido
-                </p>
-              </div>
+              {settings.logo_url ? (
+                <img
+                  src={settings.logo_url}
+                  alt=""
+                  className="h-9 w-auto object-contain"
+                  style={{ filter: "brightness(0) invert(1) drop-shadow(0 1px 6px rgba(0,0,0,0.5))" }}
+                />
+              ) : (
+                <span className="text-white font-bold text-2xl tracking-tight" style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}>
+                  mylinky<span className="text-accent">.</span>
+                </span>
+              )}
 
               {/* Unlock actions */}
               {type === "subscribers" && (

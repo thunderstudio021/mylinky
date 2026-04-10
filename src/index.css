@@ -113,6 +113,18 @@
   display: none;
 }
 
+/* Block long-press "Save Image" on iOS/Android and drag-to-save on desktop */
+img {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+  pointer-events: none;
+}
+/* Re-enable pointer events on interactive image wrappers */
+a img, button img, [data-interactive] img {
+  pointer-events: auto;
+}
+
 /* Prevent iOS Safari auto-zoom on input focus (triggered when font-size < 16px) */
 @media (max-width: 767px) {
   input,
