@@ -206,24 +206,36 @@ const DashboardTab = () => {
         <p className="text-xs text-muted-foreground mt-0.5">Visão geral da plataforma</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-card border border-border rounded-xl p-5">
-          <span className="text-xs text-muted-foreground">Faturamento bruto</span>
-          <p className="text-2xl font-bold text-foreground mt-1">R$ {fmt(stats.revenueBruto)}</p>
-          <p className="text-[10px] text-muted-foreground mt-1">Total de assinaturas + presentes + PPV</p>
-        </div>
-        <div className="bg-card border border-border rounded-xl p-5">
-          <span className="text-xs text-muted-foreground">Receita da plataforma</span>
-          <p className="text-2xl font-bold text-foreground mt-1">R$ {fmt(stats.revenueLiquido)}</p>
-          <p className="text-[10px] text-muted-foreground mt-1">Comissão individual por criador (~20%)</p>
-        </div>
-        <div className="bg-card border border-border rounded-xl p-5">
-          <span className="text-xs text-muted-foreground">Assinantes ativos</span>
-          <p className="text-2xl font-bold text-foreground mt-1">{stats.totalSubscribers}</p>
-          <p className="text-[10px] text-muted-foreground mt-1">Assinaturas com status ativo</p>
-        </div>
+      {/* 1. 4 metric cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <MetricCard label="Usuários" value={stats.users} icon={Users} />
+        <MetricCard label="Criadores" value={stats.creators} icon={UserCheck} />
+        <MetricCard label="Seguidores" value={stats.followersTotal} icon={Heart} />
+        <MetricCard label="Presentes" value={stats.giftsTotal} icon={Gift} />
       </div>
 
+      {/* 2. Faturamento bruto */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <span className="text-xs text-muted-foreground">Faturamento bruto</span>
+        <p className="text-2xl font-bold text-foreground mt-1">R$ {fmt(stats.revenueBruto)}</p>
+        <p className="text-[10px] text-muted-foreground mt-1">Total de assinaturas + presentes + PPV</p>
+      </div>
+
+      {/* 3. Receita da plataforma */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <span className="text-xs text-muted-foreground">Receita da plataforma</span>
+        <p className="text-2xl font-bold text-foreground mt-1">R$ {fmt(stats.revenueLiquido)}</p>
+        <p className="text-[10px] text-muted-foreground mt-1">Comissão individual por criador (~20%)</p>
+      </div>
+
+      {/* 4. Assinantes ativos */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <span className="text-xs text-muted-foreground">Assinantes ativos</span>
+        <p className="text-2xl font-bold text-foreground mt-1">{stats.totalSubscribers}</p>
+        <p className="text-[10px] text-muted-foreground mt-1">Assinaturas com status ativo</p>
+      </div>
+
+      {/* 5. Chart */}
       <div className="bg-card border border-border rounded-xl p-5">
         <h3 className="text-sm font-medium text-foreground mb-1">Vendas mensais</h3>
         <p className="text-xs text-muted-foreground mb-4">Últimos 6 meses</p>
@@ -248,13 +260,6 @@ const DashboardTab = () => {
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <MetricCard label="Usuários" value={stats.users} icon={Users} />
-        <MetricCard label="Criadores" value={stats.creators} icon={UserCheck} />
-        <MetricCard label="Seguidores" value={stats.followersTotal} icon={Heart} />
-        <MetricCard label="Presentes" value={stats.giftsTotal} icon={Gift} />
       </div>
 
       <div className="grid grid-cols-3 gap-3">
