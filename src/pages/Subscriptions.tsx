@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, Crown, Loader2, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { AppAvatar } from "@/components/AppAvatar";
 import { supabase } from "@/integrations/supabase/client";
 
 const Subscriptions = () => {
@@ -74,13 +75,7 @@ const Subscriptions = () => {
                     onClick={() => navigate(`/${sub.creator?.username}`)}
                     className="flex items-center gap-3 min-w-0"
                   >
-                    <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center text-foreground text-sm font-semibold shrink-0 overflow-hidden">
-                      {sub.creator?.avatar_url ? (
-                        <img src={sub.creator.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        sub.creator?.name?.[0] || "?"
-                      )}
-                    </div>
+                    <AppAvatar src={sub.creator?.avatar_url} name={sub.creator?.name ?? "?"} className="w-11 h-11 shrink-0" sizePx={88} textClassName="text-sm" />
                     <div className="min-w-0 text-left">
                       <p className="text-sm font-medium text-foreground truncate">{sub.creator?.name}</p>
                       <p className="text-xs text-muted-foreground truncate">@{sub.creator?.username}</p>

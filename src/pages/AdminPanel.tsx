@@ -6,6 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import logoImg from "@/assets/logo.png";
+import { AppAvatar } from "@/components/AppAvatar";
+import { LazyImage } from "@/components/LazyImage";
 import {
   Menu, X, LayoutDashboard, Users, FileText, Wallet,
   ChevronRight, Search, CheckCircle, XCircle, Eye, Pencil,
@@ -286,9 +288,7 @@ const DashboardTab = () => {
           {recentUsers.map(u => (
             <div key={u.id} className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-foreground text-xs font-semibold shrink-0 overflow-hidden">
-                  {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : u.name?.[0] || "U"}
-                </div>
+                <AppAvatar src={u.avatar_url} name={u.name ?? "U"} className="w-8 h-8 shrink-0" sizePx={64} textClassName="text-xs" />
                 <div className="min-w-0">
                   <p className="text-sm text-foreground truncate">{u.name}</p>
                   <p className="text-xs text-muted-foreground truncate">@{u.username}</p>
@@ -469,17 +469,13 @@ const CreatorsTab = () => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Foto de Perfil</label>
-                <div className="w-24 h-24 rounded-full bg-secondary overflow-hidden border border-border">
-                  {(app?.avatar_url || reviewing.avatar_url) ? (
-                    <img src={app?.avatar_url || reviewing.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">Sem foto</div>}
-                </div>
+                <AppAvatar src={app?.avatar_url || reviewing.avatar_url} name={reviewing.name ?? "?"} className="w-24 h-24 border border-border" sizePx={192} />
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Foto de Capa</label>
                 <div className="h-24 rounded-lg bg-secondary overflow-hidden border border-border">
                   {(app?.cover_url || reviewing.cover_url) ? (
-                    <img src={app?.cover_url || reviewing.cover_url} alt="" className="w-full h-full object-cover" />
+                    <LazyImage src={app?.cover_url || reviewing.cover_url} alt="" className="w-full h-full object-cover" width={600} />
                   ) : <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">Sem foto</div>}
                 </div>
               </div>
@@ -535,9 +531,7 @@ const CreatorsTab = () => {
         </button>
         <div className="bg-card border border-border rounded-xl p-5 space-y-4 max-w-lg">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold overflow-hidden">
-              {editing.avatar_url ? <img src={editing.avatar_url} alt="" className="w-full h-full object-cover" /> : editing.name?.[0] || "U"}
-            </div>
+            <AppAvatar src={editing.avatar_url} name={editing.name ?? "?"} className="w-12 h-12" sizePx={96} />
             <div>
               <p className="text-sm font-semibold text-foreground">{editing.name}</p>
               <p className="text-xs text-muted-foreground">@{editing.username}</p>
@@ -587,9 +581,7 @@ const CreatorsTab = () => {
           <div key={c.id} className={`bg-card border rounded-xl p-4 ${c.blocked ? "border-destructive/30" : "border-border"}`}>
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0 cursor-pointer" onClick={() => c.application ? openReview(c) : null}>
-                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold shrink-0 overflow-hidden">
-                  {c.avatar_url ? <img src={c.avatar_url} alt="" className="w-full h-full object-cover" /> : c.name?.[0] || "U"}
-                </div>
+                <AppAvatar src={c.avatar_url} name={c.name ?? "?"} className="w-10 h-10 shrink-0" sizePx={80} />
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
                     <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
@@ -688,9 +680,7 @@ const UsersTab = () => {
         </button>
         <div className="bg-card border border-border rounded-xl p-5 space-y-4 max-w-lg">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold overflow-hidden">
-              {editing.avatar_url ? <img src={editing.avatar_url} alt="" className="w-full h-full object-cover" /> : editing.name?.[0] || "U"}
-            </div>
+            <AppAvatar src={editing.avatar_url} name={editing.name ?? "?"} className="w-12 h-12" sizePx={96} />
             <div>
               <p className="text-sm font-semibold text-foreground">{editing.name}</p>
               <p className="text-xs text-muted-foreground">@{editing.username}</p>
@@ -725,9 +715,7 @@ const UsersTab = () => {
           <div key={u.id} className={`bg-card border rounded-xl p-4 ${u.blocked ? "border-destructive/30" : "border-border"}`}>
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold shrink-0 overflow-hidden">
-                  {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : u.name?.[0] || "U"}
-                </div>
+                <AppAvatar src={u.avatar_url} name={u.name ?? "?"} className="w-10 h-10 shrink-0" sizePx={80} />
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
                     <p className="text-sm font-medium text-foreground truncate">{u.name}</p>
@@ -814,9 +802,7 @@ const WithdrawalsTab = () => {
             <div key={r.id} className="bg-card border border-border rounded-xl p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold shrink-0 overflow-hidden">
-                    {r.profile?.avatar_url ? <img src={r.profile.avatar_url} alt="" className="w-full h-full object-cover" /> : r.profile?.name?.[0] || "U"}
-                  </div>
+                  <AppAvatar src={r.profile?.avatar_url} name={r.profile?.name ?? "?"} className="w-9 h-9 shrink-0" sizePx={72} />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{r.profile?.name}</p>
                     <p className="text-xs text-muted-foreground">R$ {Number(r.amount).toFixed(2)} · {r.bank_name}</p>
@@ -899,9 +885,7 @@ const PostsTab = () => {
           <div key={p.id} className="bg-card border border-border rounded-xl p-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3 min-w-0 flex-1">
-                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-foreground text-xs font-semibold shrink-0 overflow-hidden">
-                  {p.creator?.avatar_url ? <img src={p.creator.avatar_url} alt="" className="w-full h-full object-cover" /> : p.creator?.name?.[0] || "U"}
-                </div>
+                <AppAvatar src={p.creator?.avatar_url} name={p.creator?.name ?? "?"} className="w-8 h-8 shrink-0" sizePx={64} textClassName="text-xs" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="text-xs font-medium text-foreground">{p.creator?.name}</p>
@@ -967,7 +951,7 @@ const DocImage = ({ label, url }: { label: string; url: string }) => (
     <div className="h-36 rounded-lg bg-secondary border border-border overflow-hidden">
       {url ? (
         <a href={url} target="_blank" rel="noopener noreferrer">
-          <img src={url} alt={label} className="w-full h-full object-cover hover:opacity-80 transition-opacity" />
+          <LazyImage src={url} alt={label} className="w-full h-full object-cover hover:opacity-80 transition-opacity" width={400} />
         </a>
       ) : (
         <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">Carregando...</div>
@@ -1077,7 +1061,7 @@ const BannersTab = () => {
         {banners.map((b, i) => (
           <div key={b.id} className="bg-card border border-border rounded-xl p-4 flex items-center gap-4">
             <div className="w-28 h-16 rounded-lg overflow-hidden bg-secondary shrink-0">
-              <img src={b.image_url} alt="Banner" className="w-full h-full object-cover" />
+              <LazyImage src={b.image_url} alt="Banner" className="w-full h-full object-cover" width={224} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs text-muted-foreground truncate">{b.link_url || "Sem link"}</p>

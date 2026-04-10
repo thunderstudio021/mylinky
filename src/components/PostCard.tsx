@@ -1,5 +1,7 @@
 import { Heart, MessageCircle, X, Play, Gift, MoreVertical, Pencil, Trash2, MessageSquareOff, Lock, Crown, Send, Loader2 } from "lucide-react";
 import { VerifiedBadge } from "./VerifiedBadge";
+import { AppAvatar } from "./AppAvatar";
+import { LazyImage } from "./LazyImage";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
@@ -286,11 +288,7 @@ const PostCard = ({
         {/* Header */}
         <div className="flex items-center justify-between p-4">
           <Link to={`/${creator.username}`} className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold text-sm overflow-hidden">
-              {creator.avatar_url ? (
-                <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
-              ) : creator.name[0]}
-            </div>
+            <AppAvatar src={creator.avatar_url} name={creator.name} className="w-9 h-9" sizePx={72} textClassName="text-sm" />
             <div>
               <div className="flex items-center gap-1">
                 <span className="text-sm font-medium text-foreground group-hover:underline">{creator.name}</span>
@@ -412,7 +410,7 @@ const PostCard = ({
               <div className="relative cursor-pointer" onClick={() => isVideo ? setVideoPlaying(true) : setFullscreen(true)}>
                 {isVideo ? (
                   <div className="relative w-full" style={{ aspectRatio: "9/16" }}>
-                    <video src={video} className="w-full h-full object-cover" muted playsInline loop />
+                    <video src={video} className="w-full h-full object-cover" muted playsInline loop preload="metadata" />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/10 transition-opacity hover:bg-black/20">
                       <div className="w-12 h-12 rounded-full bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center transition-transform duration-200 hover:scale-110">
                         <Play className="w-5 h-5 text-white ml-0.5 drop-shadow-sm" />
@@ -420,7 +418,9 @@ const PostCard = ({
                     </div>
                   </div>
                 ) : (
-                  <img src={image} alt="" className="w-full object-cover" style={{ aspectRatio: "4/5" }} />
+                  <div className="relative w-full" style={{ aspectRatio: "4/5" }}>
+                    <LazyImage src={image} alt="" className="w-full h-full object-cover" width={600} />
+                  </div>
                 )}
               </div>
             )}
@@ -468,9 +468,7 @@ const PostCard = ({
                 ) : (
                   commentsList.map(c => (
                     <div key={c.id} className="flex gap-3">
-                      <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-foreground text-xs font-semibold shrink-0 overflow-hidden">
-                        {c.profile?.avatar_url ? <img src={c.profile.avatar_url} alt="" className="w-full h-full object-cover" /> : c.profile?.name?.[0] || "U"}
-                      </div>
+                      <AppAvatar src={c.profile?.avatar_url} name={c.profile?.name ?? "U"} className="w-8 h-8" sizePx={64} textClassName="text-xs" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-medium text-foreground">{c.profile?.name || "Usuário"}</span>

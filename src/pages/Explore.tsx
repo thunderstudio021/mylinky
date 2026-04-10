@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Users, Crown } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { AppAvatar } from "@/components/AppAvatar";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Creator {
@@ -88,15 +89,13 @@ const Explore = () => {
                 }`}>
                   <div className="flex items-center gap-4">
                     {/* Avatar */}
-                    <div className={`shrink-0 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold overflow-hidden ${
-                      i === 0 ? "w-16 h-16 text-xl" : "w-13 h-13 text-lg"
-                    }`}
-                      style={{ width: i === 0 ? 64 : 52, height: i === 0 ? 64 : 52 }}
-                    >
-                      {creator.avatar_url ? (
-                        <img src={creator.avatar_url} alt={creator.name} className="w-full h-full object-cover" />
-                      ) : creator.name[0]}
-                    </div>
+                    <AppAvatar
+                      src={creator.avatar_url}
+                      name={creator.name}
+                      sizePx={i === 0 ? 64 : 52}
+                      className={i === 0 ? "w-16 h-16" : "w-13 h-13"}
+                      textClassName={i === 0 ? "text-xl" : "text-lg"}
+                    />
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
@@ -144,11 +143,7 @@ const Explore = () => {
                 >
                   <div className="bg-card border border-border rounded-lg px-4 py-3.5 hover:border-muted-foreground/30 transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold text-sm shrink-0 overflow-hidden">
-                        {creator.avatar_url ? (
-                          <img src={creator.avatar_url} alt={creator.name} className="w-full h-full object-cover" />
-                        ) : creator.name[0]}
-                      </div>
+                      <AppAvatar src={creator.avatar_url} name={creator.name} className="w-11 h-11" sizePx={88} textClassName="text-sm" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1">
                           <span className="text-sm font-medium text-foreground truncate group-hover:underline">{creator.name}</span>

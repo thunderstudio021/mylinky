@@ -2,6 +2,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
 import { Users, FileText, Heart, Crown, UserPlus, UserCheck, Camera, Pencil, Check, X, MessageCircle } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { LazyImage } from "@/components/LazyImage";
+import { AppAvatar } from "@/components/AppAvatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import PostCard from "@/components/PostCard";
@@ -171,7 +173,7 @@ const CreatorProfile = () => {
       {/* Cover */}
       <div className="relative bg-secondary group" style={{ aspectRatio: "16/5" }}>
         {creator.cover_url ? (
-          <img src={creator.cover_url} alt="Capa" className="w-full h-full object-cover" />
+          <LazyImage src={creator.cover_url} alt="Capa" className="w-full h-full object-cover" width={1200} quality={80} />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-secondary to-muted" />
         )}
@@ -193,11 +195,7 @@ const CreatorProfile = () => {
           <div className="flex flex-col items-center text-center">
             {/* Avatar */}
             <div className="relative group/avatar">
-              <div className="w-24 h-24 rounded-full bg-secondary border-4 border-background flex items-center justify-center text-foreground text-3xl font-semibold overflow-hidden">
-                {creator.avatar_url ? (
-                  <img src={creator.avatar_url} alt={creator.name} className="w-full h-full object-cover" />
-                ) : creator.name[0]}
-              </div>
+              <AppAvatar src={creator.avatar_url} name={creator.name} className="w-24 h-24 border-4 border-background" sizePx={192} textClassName="text-3xl" />
               {isOwnProfile && (
                 <button
                   onClick={() => avatarInputRef.current?.click()}

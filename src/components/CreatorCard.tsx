@@ -1,6 +1,7 @@
 import { Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import { VerifiedBadge } from "./VerifiedBadge";
+import { AppAvatar } from "./AppAvatar";
 
 interface CreatorCardProps {
   name: string;
@@ -18,11 +19,7 @@ const CreatorCard = ({ name, username, avatar, category, followers, price, verif
     <Link to={`/${username}`} className="block group">
       <div className="bg-card border border-border rounded-lg p-4 hover:border-muted-foreground/30 transition-colors">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center text-foreground font-semibold text-base shrink-0 overflow-hidden">
-            {avatar ? (
-              <img src={avatar} alt={name} className="w-full h-full object-cover" />
-            ) : name[0]}
-          </div>
+          <AppAvatar src={avatar} name={name} className="w-11 h-11" sizePx={88} textClassName="text-base" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1">
               <span className="text-sm font-medium text-foreground truncate group-hover:underline">{name}</span>

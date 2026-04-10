@@ -12,6 +12,7 @@ import CreatePostModal from "@/components/CreatePostModal";
 import NotificationPanel, { useUnreadNotifications } from "@/components/NotificationPanel";
 import { useTheme } from "@/hooks/useTheme";
 import logoImg from "@/assets/logo.png";
+import { AppAvatar } from "@/components/AppAvatar";
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -96,13 +97,7 @@ const Navbar = () => {
           <NotificationBell className="text-muted-foreground hover:text-foreground transition-colors" />
           {user ?
           <button onClick={() => setMenuOpen(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground transition-colors">
-              <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-foreground text-xs font-medium overflow-hidden">
-                {profile?.avatar_url ?
-              <img src={profile.avatar_url} alt={profile.name} className="w-full h-full object-cover" /> :
-
-              profile?.name?.[0] || "U"
-              }
-              </div>
+              <AppAvatar src={profile?.avatar_url} name={profile?.name ?? "U"} className="w-7 h-7" sizePx={56} textClassName="text-xs font-medium" />
               <span className="hidden lg:inline">{profile?.name?.split(" ")[0] || "Usuário"}</span>
             </button> :
 
@@ -188,13 +183,7 @@ const Navbar = () => {
                 onClick={() => {navigate(`/${profile?.username || ""}`);setMenuOpen(false);}}
                 className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-secondary transition-colors mb-1">
                 
-                    <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center text-foreground text-lg font-semibold shrink-0 overflow-hidden">
-                      {profile?.avatar_url ?
-                  <img src={profile.avatar_url} alt={profile.name} className="w-full h-full object-cover" /> :
-
-                  profile?.name?.[0] || "U"
-                  }
-                    </div>
+                    <AppAvatar src={profile?.avatar_url} name={profile?.name ?? "U"} className="w-11 h-11 shrink-0" sizePx={88} textClassName="text-lg" />
                     <div className="text-left min-w-0">
                       <p className="text-sm font-semibold text-foreground truncate">{profile?.name || "Usuário"}</p>
                       <p className="text-xs text-muted-foreground truncate">@{profile?.username || ""}</p>

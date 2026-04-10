@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Camera, Video, FileText, BarChart3, X, Image, Upload, Eye, Crown, DollarSign, ArrowLeft, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { AppAvatar } from "./AppAvatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -207,13 +208,7 @@ const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
                 <div className="p-4 space-y-4">
                   {/* User info */}
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-foreground text-sm font-semibold overflow-hidden">
-                      {profile?.avatar_url ? (
-                        <img src={profile.avatar_url} alt={profile.name} className="w-full h-full object-cover" />
-                      ) : (
-                        profile?.name?.[0] || "U"
-                      )}
-                    </div>
+                    <AppAvatar src={profile?.avatar_url} name={profile?.name ?? "U"} className="w-9 h-9" sizePx={72} textClassName="text-sm" />
                     <div>
                       <p className="text-sm font-medium text-foreground">{profile?.name}</p>
                       <p className="text-xs text-muted-foreground">@{profile?.username}</p>

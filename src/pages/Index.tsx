@@ -1,7 +1,7 @@
 import PostCard from "@/components/PostCard";
 import CreatorCard from "@/components/CreatorCard";
 import BannerCarousel from "@/components/BannerCarousel";
-import { BadgeCheck } from "lucide-react";
+import { AppAvatar } from "@/components/AppAvatar";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,13 +84,7 @@ const Index = () => {
                   <div className="flex gap-3" style={{ width: "max-content" }}>
                     {creators.map((creator) => (
                       <Link key={creator.id} to={`/${creator.username}`} className="flex flex-col items-center gap-1.5 w-[72px] shrink-0">
-                        <div className="w-[60px] h-[60px] rounded-full bg-secondary border-2 border-accent/40 flex items-center justify-center overflow-hidden">
-                          {creator.avatar_url ? (
-                            <img src={creator.avatar_url} alt={creator.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-foreground font-semibold text-lg">{creator.name?.[0]}</span>
-                          )}
-                        </div>
+                        <AppAvatar src={creator.avatar_url} name={creator.name} className="w-[60px] h-[60px] border-2 border-accent/40" sizePx={60} textClassName="text-lg" />
                         <div className="flex items-center gap-0.5 max-w-full">
                           <span className="text-[11px] text-foreground font-medium truncate">{creator.name?.split(" ")[0]}</span>
                           {creator.verified && <BadgeCheck className="w-3 h-3 text-accent shrink-0" />}

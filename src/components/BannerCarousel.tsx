@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { LazyImage } from "./LazyImage";
 
 interface Banner {
   id: string;
@@ -77,10 +78,12 @@ const BannerCarousel = () => {
             className="absolute inset-0 cursor-pointer"
             onClick={handleClick}
           >
-            <img
+            <LazyImage
               src={banner.image_url}
               alt="Banner"
               className="w-full h-full object-cover"
+              width={1200}
+              quality={80}
               draggable={false}
             />
           </motion.div>

@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Send, MessageCircle } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { AppAvatar } from "@/components/AppAvatar";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Conversation {
@@ -230,13 +231,7 @@ const Chat = () => {
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center shrink-0 overflow-hidden">
-            {activeConv.otherUser.avatar_url ? (
-              <img src={activeConv.otherUser.avatar_url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-sm font-medium text-foreground">{activeConv.otherUser.name[0]}</span>
-            )}
-          </div>
+          <AppAvatar src={activeConv.otherUser.avatar_url} name={activeConv.otherUser.name} className="w-9 h-9 shrink-0" sizePx={72} textClassName="text-sm" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground truncate flex items-center gap-1">
               {activeConv.otherUser.name}
@@ -337,13 +332,7 @@ const Chat = () => {
                 onClick={() => openConversation(conv)}
                 className="flex items-center gap-3 w-full px-4 py-3.5 hover:bg-secondary/50 transition-colors text-left"
               >
-                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center shrink-0 overflow-hidden">
-                  {conv.otherUser.avatar_url ? (
-                    <img src={conv.otherUser.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-base font-medium text-foreground">{conv.otherUser.name[0]}</span>
-                  )}
-                </div>
+                <AppAvatar src={conv.otherUser.avatar_url} name={conv.otherUser.name} className="w-12 h-12 shrink-0" sizePx={96} textClassName="text-base" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold text-foreground truncate flex items-center gap-1">

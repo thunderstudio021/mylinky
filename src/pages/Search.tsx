@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Search as SearchIcon, X, Users } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { AppAvatar } from "@/components/AppAvatar";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -91,11 +92,7 @@ const Search = () => {
                 to={`/${creator.username}`}
                 className="flex items-center gap-3 p-3 rounded-lg hover:bg-secondary transition-colors"
               >
-                <div className="w-11 h-11 rounded-full bg-secondary border border-border flex items-center justify-center text-foreground font-semibold text-base shrink-0 overflow-hidden">
-                  {creator.avatar_url ? (
-                    <img src={creator.avatar_url} alt={creator.name} className="w-full h-full object-cover" />
-                  ) : creator.name[0]}
-                </div>
+                <AppAvatar src={creator.avatar_url} name={creator.name} className="w-11 h-11 border border-border" sizePx={88} textClassName="text-base" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1">
                     <span className="text-sm font-medium text-foreground truncate">{creator.name}</span>

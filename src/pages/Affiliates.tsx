@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, Users2, TrendingUp, Search, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { AppAvatar } from "@/components/AppAvatar";
 import { supabase } from "@/integrations/supabase/client";
 
 const Affiliates = () => {
@@ -112,9 +113,7 @@ const Affiliates = () => {
                         onClick={() => navigate(`/${c.username}`)}
                         className="flex items-center gap-3 min-w-0"
                       >
-                        <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center text-foreground text-sm font-semibold shrink-0 overflow-hidden">
-                          {c.avatar_url ? <img src={c.avatar_url} alt="" className="w-full h-full object-cover" /> : c.name?.[0] || "U"}
-                        </div>
+                        <AppAvatar src={c.avatar_url} name={c.name ?? "U"} className="w-9 h-9 shrink-0" sizePx={72} textClassName="text-sm" />
                         <div className="min-w-0 text-left">
                           <p className="text-sm text-foreground truncate">{c.name}</p>
                           <p className="text-xs text-muted-foreground truncate">@{c.username}</p>
