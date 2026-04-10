@@ -157,89 +157,101 @@ const Navbar = () => {
       {/* Notification Panel */}
       <NotificationPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
 
-      {/* Fullscreen Menu Overlay */}
+      {/* Mobile Menu — backdrop + slide-in drawer */}
       <AnimatePresence>
-        {menuOpen &&
-        <motion.div
-          initial={{ opacity: 0, x: "100%" }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: "100%" }}
-          transition={{ type: "tween", duration: 0.25 }}
-          className="fixed inset-0 z-[100] bg-background overflow-y-auto">
-          
-            <div className="flex items-center justify-between px-4 h-12 md:h-14 border-b border-border">
-              <button onClick={() => setMenuOpen(false)} className="text-foreground">
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <span className="text-sm font-semibold text-foreground">Menu</span>
-              <div className="w-5" />
-            </div>
+        {menuOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.22 }}
+              className="fixed inset-0 z-[99] bg-black/50 backdrop-blur-sm"
+              onClick={() => setMenuOpen(false)}
+            />
 
-            <div className="px-4 py-4 space-y-1">
-              {/* User profile header */}
-              {user &&
-            <>
-                  <button
-                onClick={() => {navigate(`/${profile?.username || ""}`);setMenuOpen(false);}}
-                className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-secondary transition-colors mb-1">
-                
-                    <AppAvatar src={profile?.avatar_url} name={profile?.name ?? "U"} className="w-11 h-11 shrink-0" sizePx={88} textClassName="text-lg" />
-                    <div className="text-left min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{profile?.name || "Usuário"}</p>
-                      <p className="text-xs text-muted-foreground truncate">@{profile?.username || ""}</p>
-                    </div>
-                  </button>
-                  <div className="border-t border-border my-3" />
-                </>
-            }
+            {/* Drawer panel */}
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", stiffness: 320, damping: 32, mass: 0.9 }}
+              className="fixed top-0 right-0 bottom-0 z-[100] w-full max-w-[320px] bg-card border-l border-border overflow-y-auto shadow-2xl"
+            >
+              <div className="flex items-center justify-between px-4 h-14 border-b border-border">
+                <span className="text-sm font-semibold text-foreground">Menu</span>
+                <button onClick={() => setMenuOpen(false)} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-              <MenuItem icon={Home} label="Início" onClick={() => {navigate("/");setMenuOpen(false);}} active={isActive("/")} />
-              <MenuItem icon={MessageCircle} label="Chat" onClick={() => {navigate("/chat");setMenuOpen(false);}} />
-              <MenuItem icon={Compass} label="Descobrir" onClick={() => {navigate("/explore");setMenuOpen(false);}} active={isActive("/explore")} />
-              <MenuItem icon={Search} label="Pesquisar" onClick={() => {navigate("/search");setMenuOpen(false);}} />
-              {!isCreator && !isAdmin && user &&
-            <MenuItem icon={UserPlus2} label="Seja um criador" onClick={() => {navigate("/become-creator");setMenuOpen(false);}} />
-            }
+              <div className="px-3 py-4 space-y-0.5">
+                {/* User profile header */}
+                {user && (
+                  <>
+                    <button
+                      onClick={() => { navigate(`/${profile?.username || ""}`); setMenuOpen(false); }}
+                      className="flex items-center gap-3 w-full px-3 py-3 rounded-lg hover:bg-secondary transition-colors mb-1"
+                    >
+                      <AppAvatar src={profile?.avatar_url} name={profile?.name ?? "U"} className="w-11 h-11 shrink-0" sizePx={88} textClassName="text-lg" />
+                      <div className="text-left min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{profile?.name || "Usuário"}</p>
+                        <p className="text-xs text-muted-foreground truncate">@{profile?.username || ""}</p>
+                      </div>
+                    </button>
+                    <div className="border-t border-border my-2" />
+                  </>
+                )}
 
-              <div className="border-t border-border my-3" />
-              <p className="text-xs font-semibold text-foreground px-3 py-2">Colaborações</p>
-              <MenuItem icon={Link2} label="Indicação" onClick={() => {navigate("/referral");setMenuOpen(false);}} />
-              <MenuItem icon={Users2} label="Afiliações" onClick={() => {navigate("/affiliates");setMenuOpen(false);}} />
+                <MenuItem icon={Home} label="Início" onClick={() => { navigate("/"); setMenuOpen(false); }} active={isActive("/")} />
+                <MenuItem icon={MessageCircle} label="Chat" onClick={() => { navigate("/chat"); setMenuOpen(false); }} />
+                <MenuItem icon={Compass} label="Descobrir" onClick={() => { navigate("/explore"); setMenuOpen(false); }} active={isActive("/explore")} />
+                <MenuItem icon={Search} label="Pesquisar" onClick={() => { navigate("/search"); setMenuOpen(false); }} />
+                {!isCreator && !isAdmin && user && (
+                  <MenuItem icon={UserPlus2} label="Seja um criador" onClick={() => { navigate("/become-creator"); setMenuOpen(false); }} />
+                )}
 
-              {(isCreator || isAdmin) &&
-            <>
-                  <div className="border-t border-border my-3" />
-                  <p className="text-xs font-semibold text-foreground px-3 py-2">Financeiro</p>
-                  <MenuItem icon={Wallet} label="Carteira Digital" onClick={() => {navigate("/dashboard");setMenuOpen(false);}} active={isActive("/dashboard")} />
-                </>
-            }
+                <div className="border-t border-border my-2" />
+                <p className="text-[11px] font-semibold text-muted-foreground px-3 py-1.5 uppercase tracking-wider">Colaborações</p>
+                <MenuItem icon={Link2} label="Indicação" onClick={() => { navigate("/referral"); setMenuOpen(false); }} />
+                <MenuItem icon={Users2} label="Afiliações" onClick={() => { navigate("/affiliates"); setMenuOpen(false); }} />
 
-              {isAdmin &&
-            <>
-                  <div className="border-t border-border my-3" />
-                  <p className="text-xs font-semibold text-foreground px-3 py-2">Administração</p>
-                  <MenuItem icon={Shield} label="Painel Admin" onClick={() => {navigate("/admin-panel");setMenuOpen(false);}} active={isActive("/admin-panel")} />
-                </>
-            }
+                {(isCreator || isAdmin) && (
+                  <>
+                    <div className="border-t border-border my-2" />
+                    <p className="text-[11px] font-semibold text-muted-foreground px-3 py-1.5 uppercase tracking-wider">Financeiro</p>
+                    <MenuItem icon={Wallet} label="Carteira Digital" onClick={() => { navigate("/dashboard"); setMenuOpen(false); }} active={isActive("/dashboard")} />
+                  </>
+                )}
 
-              <div className="border-t border-border my-3" />
-              <p className="text-xs font-semibold text-foreground px-3 py-2">Sua conta</p>
-              <MenuItem icon={Heart} label="Assinaturas" onClick={() => {navigate("/subscriptions");setMenuOpen(false);}} />
-              <MenuItem icon={Settings} label="Configurações" onClick={() => {navigate("/settings");setMenuOpen(false);}} />
-              <MenuItem icon={HelpCircle} label="Suporte" onClick={() => {navigate("/support");setMenuOpen(false);}} />
+                {isAdmin && (
+                  <>
+                    <div className="border-t border-border my-2" />
+                    <p className="text-[11px] font-semibold text-muted-foreground px-3 py-1.5 uppercase tracking-wider">Administração</p>
+                    <MenuItem icon={Shield} label="Painel Admin" onClick={() => { navigate("/admin-panel"); setMenuOpen(false); }} active={isActive("/admin-panel")} />
+                  </>
+                )}
 
-              {user &&
-            <>
-                  <div className="border-t border-border my-3" />
-                  <button onClick={handleLogout} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-                    <LogOut className="w-5 h-5" />
-                    Sair
-                  </button>
-                </>
-            }
-            </div>
-          </motion.div>
-        }
+                <div className="border-t border-border my-2" />
+                <p className="text-[11px] font-semibold text-muted-foreground px-3 py-1.5 uppercase tracking-wider">Sua conta</p>
+                <MenuItem icon={Heart} label="Assinaturas" onClick={() => { navigate("/subscriptions"); setMenuOpen(false); }} />
+                <MenuItem icon={Settings} label="Configurações" onClick={() => { navigate("/settings"); setMenuOpen(false); }} />
+                <MenuItem icon={HelpCircle} label="Suporte" onClick={() => { navigate("/support"); setMenuOpen(false); }} />
+
+                {user && (
+                  <>
+                    <div className="border-t border-border my-2" />
+                    <button onClick={handleLogout} className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+                      <LogOut className="w-5 h-5" />
+                      Sair
+                    </button>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
       </AnimatePresence>
     </>);
 
