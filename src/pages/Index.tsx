@@ -1,6 +1,8 @@
 import PostCard from "@/components/PostCard";
 import CreatorCard from "@/components/CreatorCard";
 import BannerCarousel from "@/components/BannerCarousel";
+import { BadgeCheck } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -73,6 +75,32 @@ const Index = () => {
                   }`}>{tab}</button>
               ))}
             </div>
+
+            {/* Featured creators - mobile only, "Para Você" tab */}
+            {activeTab === "Para Você" && creators.length > 0 && (
+              <div className="lg:hidden mb-5">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">Criadores em destaque</h3>
+                <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide">
+                  <div className="flex gap-3" style={{ width: "max-content" }}>
+                    {creators.map((creator) => (
+                      <Link key={creator.id} to={`/${creator.username}`} className="flex flex-col items-center gap-1.5 w-[72px] shrink-0">
+                        <div className="w-[60px] h-[60px] rounded-full bg-secondary border-2 border-accent/40 flex items-center justify-center overflow-hidden">
+                          {creator.avatar_url ? (
+                            <img src={creator.avatar_url} alt={creator.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-foreground font-semibold text-lg">{creator.name?.[0]}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-0.5 max-w-full">
+                          <span className="text-[11px] text-foreground font-medium truncate">{creator.name?.split(" ")[0]}</span>
+                          {creator.verified && <BadgeCheck className="w-3 h-3 text-accent shrink-0" />}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-4">
               {loading ? (
