@@ -5,6 +5,7 @@ import { getOptimizedUrl } from "@/lib/imageUtils";
 interface LazyImageProps {
   src: string | null | undefined;
   alt: string;
+  /** Classes aplicadas ao wrapper (tamanho, border-radius, etc.) */
   className?: string;
   /** Largura alvo para otimização Supabase (px) */
   width?: number;
@@ -14,6 +15,7 @@ interface LazyImageProps {
   resize?: "cover" | "contain" | "fill";
   style?: React.CSSProperties;
   draggable?: boolean;
+  objectFit?: "cover" | "contain" | "fill";
 }
 
 export function LazyImage({
@@ -26,6 +28,7 @@ export function LazyImage({
   resize,
   style,
   draggable,
+  objectFit = "cover",
 }: LazyImageProps) {
   const [loaded, setLoaded] = useState(false);
   const [activeSrc, setActiveSrc] = useState<string | null>(null);
@@ -37,22 +40,23 @@ export function LazyImage({
   useEffect(() => {
     setLoaded(false);
     setActiveSrc(optimized);
-  }, [src]);
+  }, [src]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Se a imagem já estava em cache o browser dispara onLoad antes do mount
   useEffect(() => {
     if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
       setLoaded(true);
     }
   }, [activeSrc]);
 
-  if (!activeSrc) return <div className={cn("bg-secondary animate-pulse", className)} style={style} />;
+  if (!activeSrc) {
+    return <div className={cn("bg-secondary animate-pulse", className)} style={style} />;
+  }
 
   return (
-    <>
-      {/* Skeleton enquanto carrega */}
+    // Wrapper relativo para que o skeleton absolute funcione em qualquer contexto
+    <div className={cn("relative overflow-hidden", className)} style={style}>
       {!loaded && (
-        <div className={cn("absolute inset-0 bg-secondary animate-pulse")} />
+        <div className="absolute inset-0 bg-secondary animate-pulse" />
       )}
       <img
         ref={imgRef}
@@ -62,14 +66,12 @@ export function LazyImage({
         decoding="async"
         draggable={draggable}
         className={cn(
-          "transition-opacity duration-300",
-          loaded ? "opacity-100" : "opacity-0",
-          className
+          "w-full h-full transition-opacity duration-300",
+          objectFit === "cover" ? "object-cover" : objectFit === "contain" ? "object-contain" : "object-fill",
+          loaded ? "opacity-100" : "opacity-0"
         )}
-        style={style}
         onLoad={() => setLoaded(true)}
         onError={() => {
-          // Fallback para URL original se a transformação falhar (plano gratuito)
           if (activeSrc !== original && original) {
             setActiveSrc(original);
           } else {
@@ -77,6 +79,6 @@ export function LazyImage({
           }
         }}
       />
-    </>
+    </div>
   );
 }

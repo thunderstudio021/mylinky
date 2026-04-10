@@ -2,6 +2,7 @@ import PostCard from "@/components/PostCard";
 import CreatorCard from "@/components/CreatorCard";
 import BannerCarousel from "@/components/BannerCarousel";
 import { AppAvatar } from "@/components/AppAvatar";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,7 +88,7 @@ const Index = () => {
                         <AppAvatar src={creator.avatar_url} name={creator.name} className="w-[60px] h-[60px] border-2 border-accent/40" sizePx={60} textClassName="text-lg" />
                         <div className="flex items-center gap-0.5 max-w-full">
                           <span className="text-[11px] text-foreground font-medium truncate">{creator.name?.split(" ")[0]}</span>
-                          {creator.verified && <BadgeCheck className="w-3 h-3 text-accent shrink-0" />}
+                          {creator.verified && <VerifiedBadge className="w-3 h-3" />}
                         </div>
                       </Link>
                     ))}
