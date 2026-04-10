@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface SiteSettings {
   logo_url: string | null;
+  logo_dark_url: string | null;
   primary_color_light: string;
   primary_color_dark: string;
   instagram_url: string;
@@ -16,6 +17,7 @@ export interface SiteSettings {
 
 export const SITE_DEFAULTS: SiteSettings = {
   logo_url: null,
+  logo_dark_url: null,
   primary_color_light: "358 74% 59%",
   primary_color_dark: "358 74% 59%",
   instagram_url: "",

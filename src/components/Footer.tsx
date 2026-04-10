@@ -2,6 +2,7 @@ import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useLocation } from "react-router-dom";
 import logoImg from "@/assets/logo.png";
 import { Youtube, Twitter, Facebook, MessageCircle } from "lucide-react";
+import { useEffect, useState } from "react";
 
 // ─── TikTok SVG (not in lucide-react) ────────────────────────────────────────
 const TikTokIcon = ({ className }: { className?: string }) => (
@@ -21,9 +22,20 @@ const InstagramIcon = ({ className }: { className?: string }) => (
 
 const HIDDEN_PATHS = ["/login", "/register", "/admin-panel"];
 
+function useIsDark() {
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
+  useEffect(() => {
+    const obs = new MutationObserver(() => setDark(document.documentElement.classList.contains("dark")));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+  return dark;
+}
+
 export default function Footer() {
   const { settings } = useSiteSettings();
   const location = useLocation();
+  const isDark = useIsDark();
 
   if (HIDDEN_PATHS.includes(location.pathname)) return null;
 
@@ -43,8 +55,17 @@ export default function Footer() {
   return (
     <footer className="border-t border-border bg-background py-6 px-4">
       <div className="max-w-5xl mx-auto flex flex-col items-center gap-4">
-        {/* Logo */}
-        <img src={logoImg} alt="Logo" className="h-6 dark:invert opacity-60" />
+        {/* Logo — uses dark logo if available in dark mode, otherwise falls back */}
+        {isDark
+          ? (settings.logo_dark_url
+              ? <img src={settings.logo_dark_url} alt="Logo" className="h-6 object-contain opacity-60" />
+              : settings.logo_url
+                ? <img src={settings.logo_url} alt="Logo" className="h-6 object-contain opacity-60 invert" />
+                : <img src={logoImg} alt="Logo" className="h-6 invert opacity-60" />)
+          : (settings.logo_url
+              ? <img src={settings.logo_url} alt="Logo" className="h-6 object-contain opacity-60" />
+              : <img src={logoImg} alt="Logo" className="h-6 opacity-60" />)
+        }
 
         {/* Social icons */}
         {socials.length > 0 && (

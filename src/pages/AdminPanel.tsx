@@ -1270,26 +1270,36 @@ const ConfiguracoesTab = () => {
   const { settings, refresh } = useSiteSettings();
   const [form, setForm] = useState({ ...SITE_DEFAULTS });
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingLight, setUploadingLight] = useState(false);
+  const [uploadingDark, setUploadingDark] = useState(false);
+  const logoLightRef = useRef<HTMLInputElement>(null);
+  const logoDarkRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setForm({ ...SITE_DEFAULTS, ...settings }); }, [settings]);
 
-  const set = (k: string, v: string) => setForm(prev => ({ ...prev, [k]: v }));
+  const set = (k: string, v: string | null) => setForm(prev => ({ ...prev, [k]: v }));
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    mode: "light" | "dark",
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
+    const setter = mode === "light" ? setUploadingLight : setUploadingDark;
+    const field = mode === "light" ? "logo_url" : "logo_dark_url";
+    const filename = mode === "light" ? "logo-light" : "logo-dark";
+    setter(true);
     const ext = file.name.split(".").pop();
-    const path = `logo/logo.${ext}`;
+    const path = `logo/${filename}.${ext}`;
     await supabase.storage.from("media").remove([path]);
     const { error } = await supabase.storage.from("media").upload(path, file, { upsert: true });
-    if (error) { toast.error("Erro ao enviar logo"); setUploading(false); return; }
+    if (error) { toast.error("Erro ao enviar logo"); setter(false); return; }
     const { data } = supabase.storage.from("media").getPublicUrl(path);
-    set("logo_url", data.publicUrl + `?t=${Date.now()}`);
-    setUploading(false);
-    toast.success("Logo enviada!");
+    set(field, data.publicUrl + `?t=${Date.now()}`);
+    setter(false);
+    toast.success(mode === "light" ? "Logo (claro) enviada!" : "Logo (escuro) enviada!");
+    // Clear input so same file can be re-uploaded
+    e.target.value = "";
   };
 
   const handleSave = async () => {
@@ -1327,24 +1337,71 @@ const ConfiguracoesTab = () => {
       {/* ── Logo ── */}
       <div className="bg-card border border-border rounded-xl p-5">
         <SectionTitle icon={Upload} title="Logotipo" />
-        <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-xl bg-secondary border border-border flex items-center justify-center overflow-hidden shrink-0">
-            {form.logo_url
-              ? <img src={form.logo_url} alt="Logo" className="w-full h-full object-contain p-2 dark:invert" />
-              : <span className="text-xs text-muted-foreground">Sem logo</span>
-            }
+        <p className="text-xs text-muted-foreground mb-4 -mt-2">Use logos diferentes para modo claro e escuro. PNG ou SVG com fundo transparente.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Light logo */}
+          <div className="border border-border rounded-xl p-4 bg-white">
+            <p className="text-xs font-medium text-neutral-700 mb-3">Modo Claro</p>
+            <div className="flex items-center gap-3">
+              <div className="w-14 h-14 rounded-lg bg-neutral-100 border border-neutral-200 flex items-center justify-center overflow-hidden shrink-0">
+                {form.logo_url
+                  ? <img src={form.logo_url} alt="" className="w-full h-full object-contain p-1.5" />
+                  : <span className="text-[10px] text-neutral-400">Sem logo</span>
+                }
+              </div>
+              <div className="space-y-1.5 flex-1">
+                <input ref={logoLightRef} type="file" accept="image/*" onChange={e => handleLogoUpload(e, "light")} className="hidden" />
+                <button
+                  onClick={() => logoLightRef.current?.click()}
+                  disabled={uploadingLight}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-neutral-100 border border-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors disabled:opacity-50 w-full justify-center"
+                >
+                  <Upload className="w-3 h-3" />
+                  {uploadingLight ? "Enviando..." : "Enviar logo"}
+                </button>
+                {form.logo_url && (
+                  <button onClick={() => set("logo_url", null)}
+                    className="text-[10px] text-neutral-400 hover:text-red-500 transition-colors w-full text-center">
+                    Remover
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="space-y-2">
-            <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-            <button
-              onClick={() => logoInputRef.current?.click()}
-              disabled={uploading}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-secondary border border-border rounded-lg hover:bg-secondary/70 transition-colors disabled:opacity-50"
-            >
-              <Upload className="w-4 h-4" />
-              {uploading ? "Enviando..." : "Escolher imagem"}
-            </button>
-            <p className="text-xs text-muted-foreground">PNG ou SVG recomendado. Fundo transparente.</p>
+
+          {/* Dark logo */}
+          <div className="border border-border rounded-xl p-4 bg-neutral-900">
+            <p className="text-xs font-medium text-neutral-300 mb-3">Modo Escuro</p>
+            <div className="flex items-center gap-3">
+              <div className="w-14 h-14 rounded-lg bg-neutral-800 border border-neutral-700 flex items-center justify-center overflow-hidden shrink-0">
+                {form.logo_dark_url
+                  ? <img src={form.logo_dark_url} alt="" className="w-full h-full object-contain p-1.5" />
+                  : form.logo_url
+                    ? <img src={form.logo_url} alt="" className="w-full h-full object-contain p-1.5 invert" />
+                    : <span className="text-[10px] text-neutral-500">Sem logo</span>
+                }
+              </div>
+              <div className="space-y-1.5 flex-1">
+                <input ref={logoDarkRef} type="file" accept="image/*" onChange={e => handleLogoUpload(e, "dark")} className="hidden" />
+                <button
+                  onClick={() => logoDarkRef.current?.click()}
+                  disabled={uploadingDark}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-neutral-800 border border-neutral-700 text-neutral-300 rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 w-full justify-center"
+                >
+                  <Upload className="w-3 h-3" />
+                  {uploadingDark ? "Enviando..." : "Enviar logo"}
+                </button>
+                {form.logo_dark_url && (
+                  <button onClick={() => set("logo_dark_url", null)}
+                    className="text-[10px] text-neutral-500 hover:text-red-400 transition-colors w-full text-center">
+                    Remover
+                  </button>
+                )}
+              </div>
+            </div>
+            {!form.logo_dark_url && form.logo_url && (
+              <p className="text-[10px] text-neutral-500 mt-2">Usando logo claro invertido como fallback</p>
+            )}
           </div>
         </div>
       </div>

@@ -367,7 +367,13 @@ const PostCard = ({
             {!image && !video && !isPoll && <div className="h-48 bg-secondary/30" />}
             {/* Locked overlay — logo + unlock button only */}
             <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-5 p-6">
-              {settings.logo_url ? (
+              {settings.logo_dark_url ? (
+                <img
+                  src={settings.logo_dark_url}
+                  alt=""
+                  className="h-9 w-auto object-contain drop-shadow-md"
+                />
+              ) : settings.logo_url ? (
                 <img
                   src={settings.logo_url}
                   alt=""

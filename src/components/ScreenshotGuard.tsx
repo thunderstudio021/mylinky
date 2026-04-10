@@ -98,7 +98,9 @@ export const ScreenshotGuard = () => {
           userSelect: "none",
         }}
       >
-        {settings.logo_url ? (
+        {settings.logo_dark_url ? (
+          <img src={settings.logo_dark_url} alt="" style={{ ...logoStyle, filter: "none" }} />
+        ) : settings.logo_url ? (
           <img src={settings.logo_url} alt="" style={logoStyle} />
         ) : (
           <span style={{ color: "white", fontWeight: 700, fontSize: 24, letterSpacing: "-0.5px" }}>
