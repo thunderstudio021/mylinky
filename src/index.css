@@ -121,3 +121,13 @@
     font-size: 16px !important;
   }
 }
+
+/* Footer: clear fixed bottom nav on mobile + iPhone home-indicator safe area */
+.footer-pb {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 768px) {
+  .footer-pb {
+    padding-bottom: 1.5rem;
+  }
+}

@@ -41,7 +41,7 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-border bg-background py-6 px-4">
+    <footer className="border-t border-border bg-background pt-6 px-4 footer-pb">
       <div className="max-w-5xl mx-auto flex flex-col items-center gap-4">
         <SiteLogo className="h-6 object-contain opacity-60" />
 
