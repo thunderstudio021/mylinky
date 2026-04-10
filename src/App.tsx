@@ -61,7 +61,7 @@ const useReferralCapture = () => {
         (supabase as any).from("referral_relationships").insert({
           referrer_id: referrer.id,
           referred_id: user.id,
-          commission_rate: referrer.commission_rate ?? 10,
+          commission_rate: referrer.commission_rate ?? 0,
         }).then(() => {});
       });
   }, [user]);

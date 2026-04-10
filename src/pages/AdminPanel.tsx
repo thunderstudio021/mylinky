@@ -652,7 +652,7 @@ const UsersTab = () => {
     if (roleData?.role === "admin") setUserRole("admin");
     else if (u.is_creator) setUserRole("criador");
     else setUserRole("usuario");
-    setCommissionRate(u.commission_rate ?? 10);
+    setCommissionRate(u.commission_rate ?? 0);
     setEditing(u);
   };
 
@@ -681,7 +681,7 @@ const UsersTab = () => {
       username: editing.username,
       bio: editing.bio,
       is_creator: userRole === "criador",
-      verified: userRole === "criador" ? true : editing.verified,
+      verified: editing.verified,
       commission_rate: commissionRate,
     }).eq("id", editing.id);
     if (error) { toast.error("Erro: " + error.message); setSaving(false); return; }
@@ -750,6 +750,20 @@ const UsersTab = () => {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Verified toggle */}
+          <div className="flex items-center justify-between py-1">
+            <div>
+              <p className="text-xs font-medium text-foreground">Verificado</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Exibe o selo de verificação no perfil</p>
+            </div>
+            <button
+              onClick={() => setEditing({ ...editing, verified: !editing.verified })}
+              className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${editing.verified ? "bg-primary" : "bg-secondary border border-border"}`}
+            >
+              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${editing.verified ? "translate-x-5" : "translate-x-1"}`} />
+            </button>
           </div>
 
           {/* Referral commission rate */}
