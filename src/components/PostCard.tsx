@@ -1,7 +1,6 @@
 import { Heart, MessageCircle, X, Play, Gift, MoreVertical, Pencil, Trash2, MessageSquareOff, Lock, Crown, Send, Loader2 } from "lucide-react";
 import { VerifiedBadge } from "./VerifiedBadge";
 import { AppAvatar } from "./AppAvatar";
-import { LazyImage } from "./LazyImage";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
@@ -418,9 +417,13 @@ const PostCard = ({
                     </div>
                   </div>
                 ) : (
-                  <div className="relative w-full" style={{ aspectRatio: "4/5" }}>
-                    <LazyImage src={image} alt="" className="w-full h-full object-cover" width={600} />
-                  </div>
+                  <img
+                    src={image}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full block"
+                  />
                 )}
               </div>
             )}
