@@ -122,7 +122,7 @@ const CreatorProfile = () => {
       const folder = cropType === "avatar" ? "avatars" : "covers";
       const field = cropType === "avatar" ? "avatar_url" : "cover_url";
       const url = await uploadBlob(blob, folder);
-      await supabase.from("profiles").update({ [field]: url }).eq("id", creator.id);
+      await supabase.from("profiles").update({ [field]: url } as any).eq("id", creator.id);
       setCreator({ ...creator, [field]: url });
       toast.success(cropType === "avatar" ? "Foto de perfil atualizada!" : "Foto de capa atualizada!");
     } catch {

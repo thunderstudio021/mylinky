@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Camera, Video, FileText, BarChart3, X, Image, Upload, Eye, Crown, DollarSign, Lock, ArrowLeft, Send } from "lucide-react";
+import { Camera, Video, FileText, BarChart3, X, Image, Upload, Eye, Crown, DollarSign, ArrowLeft, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,7 +17,6 @@ const postTypeOptions: { value: PostType; label: string; icon: any; description:
   { value: "free", label: "Público", icon: Eye, description: "Visível para todos" },
   { value: "subscribers", label: "Assinantes", icon: Crown, description: "Somente para assinantes" },
   { value: "ppv", label: "Pague para ver", icon: DollarSign, description: "Defina um valor para desbloquear" },
-  { value: "ppv-subscribers", label: "Assinantes + Pago", icon: Lock, description: "Assinantes pagam para ver" },
 ];
 
 const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
@@ -322,7 +321,7 @@ const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
                       </div>
 
                       {/* PPV price input */}
-                      {(postType === "ppv" || postType === "ppv-subscribers") && (
+                      {postType === "ppv" && (
                         <div className="mt-3">
                           <label className="text-xs text-muted-foreground mb-1 block">Valor (R$)</label>
                           <input
