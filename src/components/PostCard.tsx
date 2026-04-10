@@ -116,11 +116,37 @@ const PostCard = ({
   useEffect(() => { setLocalSubscribed(isSubscribed || false); }, [isSubscribed]);
   useEffect(() => { setLocalPurchased(hasPurchased || false); }, [hasPurchased]);
 
-  // Check if user already liked
+  // Check if user already liked + fetch accurate counts from DB
   useEffect(() => {
-    if (!currentUserId) return;
-    supabase.from("likes").select("id").eq("post_id", String(id)).eq("user_id", currentUserId).maybeSingle()
-      .then(({ data }) => { if (data) setLiked(true); });
+    const postId = String(id);
+
+    // Liked status
+    if (currentUserId) {
+      supabase.from("likes").select("id").eq("post_id", postId).eq("user_id", currentUserId).maybeSingle()
+        .then(({ data }) => { if (data) setLiked(true); });
+    }
+
+    // Accurate counts straight from the source (not the cached column)
+    supabase.from("likes").select("*", { count: "exact", head: true }).eq("post_id", postId)
+      .then(({ count }) => { if (count !== null) setLikeCount(count); });
+    supabase.from("comments").select("*", { count: "exact", head: true }).eq("post_id", postId)
+      .then(({ count }) => { if (count !== null) setCommentCount(count); });
+
+    // Realtime: re-sync when other users like/comment
+    const channel = supabase.channel(`post-counts-${postId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "likes",
+        filter: `post_id=eq.${postId}` }, () => {
+        supabase.from("likes").select("*", { count: "exact", head: true }).eq("post_id", postId)
+          .then(({ count }) => { if (count !== null) setLikeCount(count); });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "comments",
+        filter: `post_id=eq.${postId}` }, () => {
+        supabase.from("comments").select("*", { count: "exact", head: true }).eq("post_id", postId)
+          .then(({ count }) => { if (count !== null) setCommentCount(count); });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [id, currentUserId]);
 
   // Load poll data
@@ -172,15 +198,19 @@ const PostCard = ({
         setFloatingHearts(prev => prev.filter(h => !ids.has(h.id)));
       }, 1200);
     }
+    const postId = String(id);
     if (liked) {
       setLiked(false);
-      setLikeCount(prev => Math.max(0, prev - 1));
-      await supabase.from("likes").delete().eq("post_id", String(id)).eq("user_id", currentUserId);
+      setLikeCount(prev => Math.max(0, prev - 1)); // optimistic
+      await supabase.from("likes").delete().eq("post_id", postId).eq("user_id", currentUserId);
     } else {
       setLiked(true);
-      setLikeCount(prev => prev + 1);
-      await supabase.from("likes").insert({ post_id: String(id), user_id: currentUserId });
+      setLikeCount(prev => prev + 1); // optimistic
+      await supabase.from("likes").insert({ post_id: postId, user_id: currentUserId });
     }
+    // Re-sync accurate count from DB
+    const { count } = await supabase.from("likes").select("*", { count: "exact", head: true }).eq("post_id", postId);
+    if (count !== null) setLikeCount(count);
     setLikingInProgress(false);
   };
 
@@ -226,16 +256,20 @@ const PostCard = ({
       toast.error("Erro ao comentar");
     } else {
       setNewComment("");
-      setCommentCount(prev => prev + 1);
       loadComments();
+      // Accurate count from DB
+      const { count } = await supabase.from("comments").select("*", { count: "exact", head: true }).eq("post_id", String(id));
+      if (count !== null) setCommentCount(count);
     }
     setPostingComment(false);
   };
 
   const handleDeleteComment = async (commentId: string) => {
     await supabase.from("comments").delete().eq("id", commentId);
-    setCommentCount(prev => Math.max(0, prev - 1));
     setCommentsList(prev => prev.filter(c => c.id !== commentId));
+    // Accurate count from DB
+    const { count } = await supabase.from("comments").select("*", { count: "exact", head: true }).eq("post_id", String(id));
+    if (count !== null) setCommentCount(count);
   };
 
   const handleToggleComments = async () => {
