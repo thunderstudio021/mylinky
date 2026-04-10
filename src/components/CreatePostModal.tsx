@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Camera, Video, FileText, BarChart3, X, Image, Upload, Eye, Crown, DollarSign, Lock, ArrowLeft, Send } from "lucide-react";
+import { Camera, Video, FileText, BarChart3, X, Image, Upload, Eye, Crown, DollarSign, ArrowLeft, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -321,7 +321,7 @@ const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
                       </div>
 
                       {/* PPV price input */}
-                      {(postType === "ppv" || postType === "ppv-subscribers") && (
+                      {postType === "ppv" && (
                         <div className="mt-3">
                           <label className="text-xs text-muted-foreground mb-1 block">Valor (R$)</label>
                           <input
