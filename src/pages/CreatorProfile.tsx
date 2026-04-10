@@ -90,12 +90,15 @@ const CreatorProfile = () => {
   const handleSubscribeConfirm = async (plan: "monthly" | "yearly", method: "pix" | "credit_card") => {
     if (!user || !creator) return;
     const amount = plan === "monthly" ? creator.price_monthly : creator.price_yearly;
-    await supabase.from("subscriptions").insert({
+    const { error } = await supabase.from("subscriptions").insert({
       subscriber_id: user.id, creator_id: creator.id, plan, amount, payment_method: method,
     });
+    if (error) { toast.error("Erro ao ativar assinatura"); return; }
     setIsSubscribed(true);
     setCreator({ ...creator, subscribers_count: creator.subscribers_count + 1 });
-    toast.success("Assinatura ativada!");
+    toast.success("Assinatura ativada! Abrindo conversa...");
+    // Give the DB trigger ~1.5s to create the conversation + send welcome message
+    setTimeout(() => navigate(`/chat/${creator.id}`), 1500);
   };
 
   const uploadBlob = async (blob: Blob, folder: string) => {
