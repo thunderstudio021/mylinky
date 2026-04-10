@@ -79,6 +79,9 @@ const PostCard = ({
   const [localSubscribed, setLocalSubscribed] = useState(isSubscribed || false);
   const [localPurchased, setLocalPurchased] = useState(hasPurchased || false);
   const [likingInProgress, setLikingInProgress] = useState(false);
+  const [heartPos, setHeartPos] = useState<{ x: number; y: number } | null>(null);
+  const lastTapRef = useRef(0);
+  const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Comments state
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -165,6 +168,29 @@ const PostCard = ({
     }
     setLikingInProgress(false);
   };
+
+  // Double-tap to like
+  const handleMediaClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const now = Date.now();
+    const delta = now - lastTapRef.current;
+    lastTapRef.current = now;
+
+    if (delta < 300 && tapTimerRef.current !== null) {
+      clearTimeout(tapTimerRef.current);
+      tapTimerRef.current = null;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const pos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      setHeartPos(pos);
+      setTimeout(() => setHeartPos(null), 700);
+      if (!liked && currentUserId && !isContentLocked) handleLike();
+    } else {
+      tapTimerRef.current = setTimeout(() => {
+        tapTimerRef.current = null;
+        if (isVideo) setVideoPlaying(true);
+        else setFullscreen(true);
+      }, 300);
+    }
+  }, [liked, isVideo, isContentLocked, currentUserId, handleLike]);
 
   // Comments
   const loadComments = async () => {
@@ -406,7 +432,7 @@ const PostCard = ({
               </div>
             )}
             {(image || video) && !isPoll && (
-              <div className="relative cursor-pointer" onClick={() => isVideo ? setVideoPlaying(true) : setFullscreen(true)}>
+              <div className="relative cursor-pointer" onClick={handleMediaClick}>
                 {isVideo ? (
                   <div className="relative w-full" style={{ aspectRatio: "9/16" }}>
                     <video src={video} className="w-full h-full object-cover" muted playsInline loop preload="metadata" />
@@ -425,6 +451,22 @@ const PostCard = ({
                     className="w-full block"
                   />
                 )}
+                {/* Double-tap heart */}
+                <AnimatePresence>
+                  {heartPos && (
+                    <motion.div
+                      key="dbl-heart"
+                      className="absolute pointer-events-none z-10"
+                      style={{ left: heartPos.x, top: heartPos.y, x: "-50%", y: "-50%" }}
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: [0, 1.35, 1.0], opacity: [0, 1, 1] }}
+                      exit={{ scale: 0.9, opacity: 0, transition: { duration: 0.22 } }}
+                      transition={{ duration: 0.38, ease: [0.23, 1, 0.32, 1] }}
+                    >
+                      <Heart className="w-20 h-20 fill-white text-white" style={{ filter: "drop-shadow(0 2px 12px rgba(0,0,0,0.45))" }} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
           </>
