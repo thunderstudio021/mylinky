@@ -43,7 +43,7 @@ const AdminSidebar = ({
     { id: "withdrawals", label: "Saques", icon: Wallet },
     { id: "posts", label: "Publicações", icon: FileText },
     { id: "banners", label: "Banners", icon: Image },
-    { id: "affiliates-admin", label: "Afiliados", icon: Users2 },
+    { id: "affiliates-admin", label: "Indicados", icon: Users2 },
     { id: "configuracoes", label: "Configurações", icon: Settings2 },
   ];
 
@@ -756,21 +756,26 @@ const UsersTab = () => {
 const WithdrawalsTab = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"pending" | "approved" | "rejected">("pending");
+  const [statusTab, setStatusTab] = useState<"pending" | "approved" | "rejected">("pending");
+  const [typeFilter, setTypeFilter] = useState<"all" | "creator" | "referral">("all");
 
   const load = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from("withdrawal_requests").select("*").eq("status", tab).order("created_at", { ascending: false });
+    let query = supabase.from("withdrawal_requests").select("*").eq("status", statusTab).order("created_at", { ascending: false });
+    if (typeFilter === "creator") query = (query as any).or("requester_type.eq.creator,requester_type.is.null");
+    if (typeFilter === "referral") query = (query as any).eq("requester_type", "referral");
+    const { data } = await query;
     const reqs = data || [];
     const enriched = await Promise.all(
       reqs.map(async (r) => {
-        const { data: profile } = await supabase.from("profiles").select("name, username, avatar_url").eq("id", r.creator_id).single();
+        const userId = r.creator_id;
+        const { data: profile } = await supabase.from("profiles").select("name, username, avatar_url").eq("id", userId).single();
         return { ...r, profile };
       })
     );
     setRequests(enriched);
     setLoading(false);
-  }, [tab]);
+  }, [statusTab, typeFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -787,19 +792,33 @@ const WithdrawalsTab = () => {
     { value: "rejected" as const, label: "Rejeitados" },
   ];
 
+  const typeFilters = [
+    { value: "all" as const, label: "Todos" },
+    { value: "creator" as const, label: "Criadores" },
+    { value: "referral" as const, label: "Indicações" },
+  ];
+
   return (
     <div>
       <h2 className="text-lg font-semibold text-foreground mb-4">Solicitações de Saque</h2>
-      <div className="flex gap-1 mb-4">
+      <div className="flex gap-1 mb-3">
         {statusTabs.map(t => (
-          <button key={t.value} onClick={() => setTab(t.value)}
-            className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${tab === t.value ? "bg-secondary text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+          <button key={t.value} onClick={() => setStatusTab(t.value)}
+            className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${statusTab === t.value ? "bg-secondary text-foreground font-medium" : "text-muted-foreground hover:text-foreground"}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-1 mb-4">
+        {typeFilters.map(t => (
+          <button key={t.value} onClick={() => setTypeFilter(t.value)}
+            className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${typeFilter === t.value ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:text-foreground"}`}>
             {t.label}
           </button>
         ))}
       </div>
       {loading ? <LoadingState /> : requests.length === 0 ? (
-        <EmptyState text={`Nenhum saque ${tab === "pending" ? "pendente" : tab === "approved" ? "aprovado" : "rejeitado"}`} />
+        <EmptyState text={`Nenhum saque ${statusTab === "pending" ? "pendente" : statusTab === "approved" ? "aprovado" : "rejeitado"}`} />
       ) : (
         <div className="space-y-2">
           {requests.map(r => (
@@ -808,12 +827,17 @@ const WithdrawalsTab = () => {
                 <div className="flex items-center gap-3 min-w-0">
                   <AppAvatar src={r.profile?.avatar_url} name={r.profile?.name ?? "?"} className="w-9 h-9 shrink-0" sizePx={72} />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{r.profile?.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground truncate">{r.profile?.name}</p>
+                      {r.requester_type === "referral" && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary shrink-0">Indicação</span>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">R$ {Number(r.amount).toFixed(2)} · {r.bank_name}</p>
                     <p className="text-xs text-muted-foreground">PIX: {r.pix_key} · {r.pix_key_holder_name}</p>
                   </div>
                 </div>
-                {tab === "pending" && (
+                {statusTab === "pending" && (
                   <div className="flex items-center gap-2 shrink-0">
                     <button onClick={() => handleUpdate(r.id, "approved")}
                       className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-colors">
@@ -1096,108 +1120,314 @@ const BannersTab = () => {
   );
 };
 
-// ─── Affiliates Admin Tab ────────────────────────────────────────────────────
+// ─── Indicados Admin Tab ────────────────────────────────────────────────────
+interface ReferrerRow {
+  referrer_id: string;
+  referrer_name: string;
+  referrer_username: string;
+  referrer_avatar: string | null;
+  referred: {
+    id: string;
+    name: string;
+    username: string;
+    avatar_url: string | null;
+    is_creator: boolean;
+    commission_rate: number;
+    rel_id: string;
+  }[];
+  totalEarnings: number;
+}
+
 const AffiliatesAdminTab = () => {
-  const [affiliates, setAffiliates] = useState<any[]>([]);
+  const [rows, setRows] = useState<ReferrerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
+  // Add link modal
+  const [addModal, setAddModal] = useState<{ referrerId: string } | null>(null);
+  const [addSearch, setAddSearch] = useState("");
+  const [addResults, setAddResults] = useState<any[]>([]);
+  const [addCommission, setAddCommission] = useState(10);
+  // Edit commission inline
+  const [editComm, setEditComm] = useState<{ relId: string; value: number } | null>(null);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const { data } = await (supabase as any)
-          .from("affiliate_relationships")
-          .select("*, affiliate:profiles!affiliate_id(name, username, avatar_url), creator:profiles!creator_id(name, username, avatar_url)")
-          .order("created_at", { ascending: false });
-        setAffiliates(data || []);
-      } catch {
-        setAffiliates([]);
+  const fmt = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    // 1. load all referral_relationships
+    const { data: rels } = await (supabase as any)
+      .from("referral_relationships")
+      .select("id, referrer_id, referred_id, commission_rate, created_at")
+      .order("created_at", { ascending: false });
+    if (!rels || rels.length === 0) { setLoading(false); setRows([]); return; }
+
+    const allIds = [...new Set([...rels.map((r: any) => r.referrer_id), ...rels.map((r: any) => r.referred_id)])];
+    const { data: profiles } = await supabase.from("profiles").select("id, name, username, avatar_url, is_creator").in("id", allIds);
+    const pMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+
+    // 2. load subscriptions for referred creators
+    const creatorIds = (profiles || []).filter((p: any) => p.is_creator).map((p: any) => p.id);
+    let subsMap = new Map<string, number>();
+    if (creatorIds.length > 0) {
+      const { data: subs } = await supabase.from("subscriptions").select("creator_id, amount").in("creator_id", creatorIds).eq("status", "active");
+      (subs || []).forEach((s: any) => {
+        subsMap.set(s.creator_id, (subsMap.get(s.creator_id) ?? 0) + Number(s.amount));
+      });
+    }
+
+    // 3. group by referrer
+    const grouped = new Map<string, ReferrerRow>();
+    rels.forEach((rel: any) => {
+      const referrer = pMap.get(rel.referrer_id);
+      if (!referrer) return;
+      if (!grouped.has(rel.referrer_id)) {
+        grouped.set(rel.referrer_id, {
+          referrer_id: rel.referrer_id,
+          referrer_name: referrer.name,
+          referrer_username: referrer.username,
+          referrer_avatar: referrer.avatar_url,
+          referred: [],
+          totalEarnings: 0,
+        });
       }
-      setLoading(false);
-    };
-    load();
+      const row = grouped.get(rel.referrer_id)!;
+      const referred = pMap.get(rel.referred_id);
+      if (referred) {
+        const creatorRevenue = subsMap.get(referred.id) ?? 0;
+        const earnings = creatorRevenue * (rel.commission_rate / 100);
+        row.totalEarnings += earnings;
+        row.referred.push({
+          id: referred.id,
+          name: referred.name,
+          username: referred.username,
+          avatar_url: referred.avatar_url,
+          is_creator: referred.is_creator,
+          commission_rate: rel.commission_rate,
+          rel_id: rel.id,
+        });
+      }
+    });
+    setRows([...grouped.values()]);
+    setLoading(false);
   }, []);
 
-  const filtered = affiliates.filter(a =>
-    !search ||
-    a.affiliate?.name?.toLowerCase().includes(search.toLowerCase()) ||
-    a.creator?.name?.toLowerCase().includes(search.toLowerCase())
+  useEffect(() => { load(); }, [load]);
+
+  const handleRemoveLink = async (relId: string) => {
+    await (supabase as any).from("referral_relationships").delete().eq("id", relId);
+    toast.success("Vínculo removido");
+    load();
+  };
+
+  const handleEditCommission = async (relId: string, rate: number) => {
+    await (supabase as any).from("referral_relationships").update({ commission_rate: rate }).eq("id", relId);
+    toast.success("Comissão atualizada");
+    setEditComm(null);
+    load();
+  };
+
+  const handleAddSearch = async (q: string) => {
+    setAddSearch(q);
+    if (q.length < 2) { setAddResults([]); return; }
+    const { data } = await supabase.from("profiles").select("id, name, username, avatar_url").ilike("name", `%${q}%`).limit(6);
+    setAddResults(data || []);
+  };
+
+  const handleAddLink = async (referrerId: string, referredId: string) => {
+    if (referrerId === referredId) { toast.error("Não é possível vincular ao mesmo usuário"); return; }
+    await (supabase as any).from("referral_relationships").insert({
+      referrer_id: referrerId,
+      referred_id: referredId,
+      commission_rate: addCommission,
+    });
+    toast.success("Vínculo adicionado");
+    setAddModal(null);
+    setAddSearch("");
+    setAddResults([]);
+    load();
+  };
+
+  const filtered = rows.filter(r =>
+    !search || r.referrer_name.toLowerCase().includes(search.toLowerCase()) || r.referrer_username.toLowerCase().includes(search.toLowerCase())
   );
+
+  const totalRefs = rows.reduce((acc, r) => acc + r.referred.length, 0);
+  const totalCreators = rows.reduce((acc, r) => acc + r.referred.filter(x => x.is_creator).length, 0);
+  const totalComm = rows.reduce((acc, r) => acc + r.totalEarnings, 0);
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">Afiliados</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">Visão geral de todas as afiliações ativas na plataforma</p>
+        <h2 className="text-lg font-semibold text-foreground">Indicados</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">Gerencie vínculos de indicação, comissões e acompanhe ganhos</p>
       </div>
 
       {loading ? <LoadingState /> : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div className="bg-card border border-border rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-foreground">{affiliates.length}</p>
-              <p className="text-xs text-muted-foreground mt-1">Afiliações totais</p>
-            </div>
-            <div className="bg-card border border-border rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-foreground">{affiliates.filter(a => a.status === "active").length}</p>
-              <p className="text-xs text-muted-foreground mt-1">Ativas</p>
-            </div>
-            <div className="bg-card border border-border rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-foreground">{new Set(affiliates.map(a => a.affiliate_id)).size}</p>
-              <p className="text-xs text-muted-foreground mt-1">Afiliados únicos</p>
-            </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Indicadores", value: String(rows.length) },
+              { label: "Indicados totais", value: String(totalRefs) },
+              { label: "Criadores ativos", value: String(totalCreators) },
+            ].map(s => (
+              <div key={s.label} className="bg-card border border-border rounded-xl p-4 text-center">
+                <p className="text-2xl font-bold text-foreground">{s.value}</p>
+                <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
+              </div>
+            ))}
           </div>
 
-          <div>
-            <div className="relative mb-3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">Comissão total gerada</p>
+            <p className="text-lg font-bold text-primary">R$ {fmt(totalComm)}</p>
+          </div>
+
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar indicador..."
+              className="w-full pl-9 pr-3 py-2.5 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none"
+            />
+          </div>
+
+          {filtered.length === 0 ? (
+            <EmptyState text="Nenhum indicador encontrado" />
+          ) : (
+            <div className="space-y-2">
+              {filtered.map(row => (
+                <div key={row.referrer_id} className="bg-card border border-border rounded-xl overflow-hidden">
+                  {/* Referrer header */}
+                  <div
+                    className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-secondary/30 transition-colors"
+                    onClick={() => setExpanded(expanded === row.referrer_id ? null : row.referrer_id)}
+                  >
+                    <AppAvatar src={row.referrer_avatar} name={row.referrer_name} className="w-9 h-9 shrink-0" sizePx={72} textClassName="text-xs" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{row.referrer_name}</p>
+                      <p className="text-xs text-muted-foreground">@{row.referrer_username} · {row.referred.length} indicado{row.referred.length !== 1 ? "s" : ""}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-semibold text-primary">R$ {fmt(row.totalEarnings)}</p>
+                      <p className="text-[10px] text-muted-foreground">comissão</p>
+                    </div>
+                    <button
+                      onClick={e => { e.stopPropagation(); setAddModal({ referrerId: row.referrer_id }); }}
+                      className="shrink-0 text-xs px-2 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                    >
+                      + Adicionar
+                    </button>
+                  </div>
+
+                  {/* Referred users list */}
+                  {expanded === row.referrer_id && (
+                    <div className="border-t border-border divide-y divide-border">
+                      {row.referred.map(ref => (
+                        <div key={ref.id} className="flex items-center gap-3 px-4 py-2.5">
+                          <AppAvatar src={ref.avatar_url} name={ref.name} className="w-8 h-8 shrink-0" sizePx={64} textClassName="text-xs" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-foreground truncate">{ref.name}</p>
+                            <p className="text-[10px] text-muted-foreground">@{ref.username}</p>
+                          </div>
+                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0 ${ref.is_creator ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"}`}>
+                            {ref.is_creator ? "Criador" : "Usuário"}
+                          </span>
+                          {/* Commission edit */}
+                          {editComm?.relId === ref.rel_id ? (
+                            <div className="flex items-center gap-1 shrink-0">
+                              <input
+                                type="number"
+                                min={0}
+                                max={50}
+                                value={editComm.value}
+                                onChange={e => setEditComm({ relId: ref.rel_id, value: Number(e.target.value) })}
+                                className="w-14 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground focus:outline-none"
+                              />
+                              <span className="text-xs text-muted-foreground">%</span>
+                              <button onClick={() => handleEditCommission(ref.rel_id, editComm.value)}
+                                className="text-xs px-2 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors">
+                                OK
+                              </button>
+                              <button onClick={() => setEditComm(null)} className="text-xs px-2 py-1 bg-secondary text-foreground rounded hover:bg-secondary/80 transition-colors">✕</button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setEditComm({ relId: ref.rel_id, value: ref.commission_rate })}
+                              className="shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              {ref.commission_rate}%
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleRemoveLink(ref.rel_id)}
+                            className="shrink-0 p-1.5 text-muted-foreground hover:text-destructive rounded-lg hover:bg-destructive/10 transition-colors"
+                            title="Remover vínculo"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Add Link Modal */}
+      {addModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60" onClick={() => { setAddModal(null); setAddSearch(""); setAddResults([]); }}>
+          <div className="bg-card border border-border rounded-xl p-5 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold text-foreground">Adicionar vínculo de indicação</h3>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Comissão (%)</label>
               <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar afiliado ou criador..."
-                className="w-full pl-9 pr-3 py-2.5 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none"
+                type="number"
+                min={0}
+                max={50}
+                value={addCommission}
+                onChange={e => setAddCommission(Number(e.target.value))}
+                className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground focus:outline-none"
               />
             </div>
-
-            {filtered.length === 0 ? (
-              <div className="bg-card border border-border rounded-xl p-8 text-center">
-                <p className="text-sm text-muted-foreground">
-                  {affiliates.length === 0
-                    ? "Nenhuma afiliação ainda. Execute o SQL de migração no Supabase para ativar esta funcionalidade."
-                    : "Nenhuma afiliação encontrada para esta busca."}
-                </p>
-              </div>
-            ) : (
-              <div className="bg-card border border-border rounded-xl divide-y divide-border">
-                {filtered.map(a => (
-                  <div key={a.id} className="flex items-center justify-between px-4 py-3 gap-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <AppAvatar src={a.affiliate?.avatar_url} name={a.affiliate?.name ?? "?"} className="w-8 h-8 shrink-0" sizePx={64} textClassName="text-xs" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate">{a.affiliate?.name}</p>
-                        <p className="text-[10px] text-muted-foreground">afiliado</p>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Buscar usuário indicado</label>
+              <input
+                value={addSearch}
+                onChange={e => handleAddSearch(e.target.value)}
+                placeholder="Nome do usuário..."
+                className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none"
+              />
+              {addResults.length > 0 && (
+                <div className="mt-2 bg-secondary border border-border rounded-lg overflow-hidden divide-y divide-border">
+                  {addResults.map(u => (
+                    <button
+                      key={u.id}
+                      onClick={() => handleAddLink(addModal.referrerId, u.id)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-card/50 transition-colors text-left"
+                    >
+                      <AppAvatar src={u.avatar_url} name={u.name} className="w-7 h-7 shrink-0" sizePx={56} textClassName="text-[10px]" />
+                      <div>
+                        <p className="text-xs font-medium text-foreground">{u.name}</p>
+                        <p className="text-[10px] text-muted-foreground">@{u.username}</p>
                       </div>
-                    </div>
-                    <span className="text-muted-foreground text-xs shrink-0">→</span>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <AppAvatar src={a.creator?.avatar_url} name={a.creator?.name ?? "?"} className="w-8 h-8 shrink-0" sizePx={64} textClassName="text-xs" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-foreground truncate">{a.creator?.name}</p>
-                        <p className="text-[10px] text-muted-foreground">criador</p>
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${a.status === "active" ? "bg-emerald-500/10 text-emerald-400" : "bg-secondary text-muted-foreground"}`}>
-                        {a.status === "active" ? "ativo" : a.status}
-                      </span>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{a.commission_rate ?? 20}% comissão</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => { setAddModal(null); setAddSearch(""); setAddResults([]); }}
+              className="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Cancelar
+            </button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
