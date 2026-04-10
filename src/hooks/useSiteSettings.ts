@@ -33,9 +33,13 @@ export function applyPrimaryColor(light: string, dark: string) {
   const root = document.documentElement;
   const isDark = root.classList.contains("dark");
   const color = isDark ? dark : light;
+  // Main color vars
   root.style.setProperty("--primary", color);
   root.style.setProperty("--accent", color);
   root.style.setProperty("--ring", color);
+  // Sidebar vars (used in admin panel and nav)
+  root.style.setProperty("--sidebar-primary", color);
+  root.style.setProperty("--sidebar-ring", color);
   // Cache for re-application on theme switch
   root.dataset.primaryLight = light;
   root.dataset.primaryDark = dark;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, UserPlus, Crown, Gift, Heart, MessageCircle, Bell, Check } from "lucide-react";
+import { X, UserPlus, Crown, Gift, Heart, MessageCircle, Bell, Check, Mail, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -20,6 +20,8 @@ const typeIcons: Record<string, any> = {
   gift: Gift,
   like: Heart,
   comment: MessageCircle,
+  message: Mail,
+  expiry: AlertTriangle,
 };
 
 interface NotificationPanelProps {
@@ -31,9 +33,40 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expiryAlerts, setExpiryAlerts] = useState<Notification[]>([]);
+
+  const checkExpiringPlans = async () => {
+    if (!user) return;
+    const in3days = new Date();
+    in3days.setDate(in3days.getDate() + 3);
+    const { data } = await (supabase as any)
+      .from("subscriptions")
+      .select("id, expires_at, creator_id, profiles!subscriptions_creator_id_fkey(name)")
+      .eq("subscriber_id", user.id)
+      .eq("status", "active")
+      .not("expires_at", "is", null)
+      .lte("expires_at", in3days.toISOString())
+      .gte("expires_at", new Date().toISOString());
+
+    const alerts: Notification[] = (data || []).map((s: any) => {
+      const expiresAt = new Date(s.expires_at);
+      const diffHours = Math.round((expiresAt.getTime() - Date.now()) / 3600000);
+      const timeStr = diffHours < 24 ? `${diffHours}h` : `${Math.ceil(diffHours / 24)} dias`;
+      return {
+        id: "expiry-" + s.id,
+        type: "expiry",
+        title: "Plano próximo do vencimento",
+        message: `Sua assinatura de ${s.profiles?.name || "criador"} vence em ${timeStr}`,
+        read: false,
+        created_at: new Date().toISOString(),
+      };
+    });
+    setExpiryAlerts(alerts);
+  };
 
   const loadNotifications = async () => {
     if (!user) return;
+    setLoading(true);
     const { data } = await supabase
       .from("notifications")
       .select("*")
@@ -41,6 +74,7 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
       .order("created_at", { ascending: false })
       .limit(50);
     setNotifications((data as Notification[]) || []);
+    await checkExpiringPlans();
     setLoading(false);
   };
 
@@ -69,6 +103,7 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
   }, [user]);
 
   const markAsRead = async (id: string) => {
+    if (id.startsWith("expiry-")) return; // In-memory, no DB record
     await supabase.from("notifications").update({ read: true }).eq("id", id);
     setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
   };
@@ -81,7 +116,8 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const allNotifications = [...expiryAlerts, ...notifications];
+  const unreadCount = notifications.filter((n) => !n.read).length + expiryAlerts.length;
 
   const getTimeAgo = (date: string) => {
     const diff = Date.now() - new Date(date).getTime();
@@ -116,7 +152,7 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
                 <Bell className="w-4 h-4 text-muted-foreground" />
                 <h3 className="text-sm font-semibold text-foreground">Notificações</h3>
                 {unreadCount > 0 && (
-                  <span className="text-[10px] font-semibold bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded-full">
+                  <span className="text-[10px] font-semibold bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full">
                     {unreadCount}
                   </span>
                 )}
@@ -137,14 +173,15 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
             <div className="overflow-y-auto flex-1">
               {loading ? (
                 <p className="text-sm text-muted-foreground text-center py-8">Carregando...</p>
-              ) : notifications.length === 0 ? (
+              ) : allNotifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 px-4">
                   <Bell className="w-8 h-8 text-muted-foreground/40 mb-3" />
                   <p className="text-sm text-muted-foreground">Nenhuma notificação ainda</p>
                 </div>
               ) : (
-                notifications.map((notif) => {
+                allNotifications.map((notif) => {
                   const Icon = typeIcons[notif.type] || Bell;
+                  const isExpiry = notif.type === "expiry";
                   return (
                     <button
                       key={notif.id}
@@ -154,9 +191,11 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
                       }`}
                     >
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                        notif.read ? "bg-secondary" : "bg-accent/10"
+                        notif.read ? "bg-secondary" : isExpiry ? "bg-yellow-500/10" : "bg-primary/10"
                       }`}>
-                        <Icon className={`w-3.5 h-3.5 ${notif.read ? "text-muted-foreground" : "text-accent"}`} />
+                        <Icon className={`w-3.5 h-3.5 ${
+                          notif.read ? "text-muted-foreground" : isExpiry ? "text-yellow-500" : "text-primary"
+                        }`} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm leading-snug ${notif.read ? "text-muted-foreground" : "text-foreground"}`}>
@@ -165,7 +204,7 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
                         <p className="text-[11px] text-muted-foreground mt-0.5">{getTimeAgo(notif.created_at)}</p>
                       </div>
                       {!notif.read && (
-                        <div className="w-2 h-2 rounded-full bg-accent shrink-0 mt-2" />
+                        <div className={`w-2 h-2 rounded-full shrink-0 mt-2 ${isExpiry ? "bg-yellow-500" : "bg-primary"}`} />
                       )}
                     </button>
                   );
@@ -181,7 +220,7 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
 
 export default NotificationPanel;
 
-// Hook to get unread count
+// Hook to get unread count (includes expiry alerts)
 export const useUnreadNotifications = () => {
   const { user } = useAuth();
   const [count, setCount] = useState(0);
@@ -195,7 +234,20 @@ export const useUnreadNotifications = () => {
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id)
         .eq("read", false);
-      setCount(c || 0);
+
+      // Also count expiring plans
+      const in3days = new Date();
+      in3days.setDate(in3days.getDate() + 3);
+      const { count: expiryCount } = await (supabase as any)
+        .from("subscriptions")
+        .select("*", { count: "exact", head: true })
+        .eq("subscriber_id", user.id)
+        .eq("status", "active")
+        .not("expires_at", "is", null)
+        .lte("expires_at", in3days.toISOString())
+        .gte("expires_at", new Date().toISOString());
+
+      setCount((c || 0) + (expiryCount || 0));
     };
     load();
 
