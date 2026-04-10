@@ -635,6 +635,7 @@ const UsersTab = () => {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
+  const [userRole, setUserRole] = useState<"usuario" | "criador" | "admin">("usuario");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -644,6 +645,15 @@ const UsersTab = () => {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const openEdit = async (u: any) => {
+    // Load current role
+    const { data: roleData } = await (supabase as any).from("user_roles").select("role").eq("user_id", u.id).maybeSingle();
+    if (roleData?.role === "admin") setUserRole("admin");
+    else if (u.is_creator) setUserRole("criador");
+    else setUserRole("usuario");
+    setEditing(u);
+  };
 
   const handleBlock = async (id: string, blocked: boolean) => {
     const { error } = await supabase.from("profiles").update({ blocked }).eq("id", id);
@@ -663,11 +673,25 @@ const UsersTab = () => {
   const handleSaveEdit = async () => {
     if (!editing) return;
     setSaving(true);
+
+    // 1. Update profile fields + is_creator
     const { error } = await supabase.from("profiles").update({
-      name: editing.name, username: editing.username, email: editing.email, bio: editing.bio,
+      name: editing.name,
+      username: editing.username,
+      bio: editing.bio,
+      is_creator: userRole === "criador",
+      verified: userRole === "criador" ? true : editing.verified,
     }).eq("id", editing.id);
+    if (error) { toast.error("Erro: " + error.message); setSaving(false); return; }
+
+    // 2. Handle admin role
+    if (userRole === "admin") {
+      await (supabase as any).from("user_roles").upsert({ user_id: editing.id, role: "admin" }, { onConflict: "user_id,role" });
+    } else {
+      await (supabase as any).from("user_roles").delete().eq("user_id", editing.id).eq("role", "admin");
+    }
+
     setSaving(false);
-    if (error) { toast.error("Erro: " + error.message); return; }
     toast.success("Usuário atualizado!");
     setEditing(null);
     load();
@@ -678,6 +702,12 @@ const UsersTab = () => {
     u.username?.toLowerCase().includes(search.toLowerCase()) ||
     u.email?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const roleOptions: { value: "usuario" | "criador" | "admin"; label: string; desc: string }[] = [
+    { value: "usuario", label: "Usuário", desc: "Acesso padrão" },
+    { value: "criador", label: "Criador", desc: "Pode publicar conteúdo" },
+    { value: "admin", label: "Admin", desc: "Acesso total ao painel" },
+  ];
 
   if (loading) return <LoadingState />;
 
@@ -697,8 +727,29 @@ const UsersTab = () => {
           </div>
           <EditField label="Nome" value={editing.name} onChange={v => setEditing({ ...editing, name: v })} />
           <EditField label="Usuário (@)" value={editing.username} onChange={v => setEditing({ ...editing, username: v })} />
-          <EditField label="Email" value={editing.email} onChange={v => setEditing({ ...editing, email: v })} />
           <EditField label="Bio" value={editing.bio || ""} onChange={v => setEditing({ ...editing, bio: v })} />
+
+          {/* Role selector */}
+          <div>
+            <label className="text-xs text-muted-foreground mb-2 block">Tipo de conta</label>
+            <div className="grid grid-cols-3 gap-2">
+              {roleOptions.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setUserRole(opt.value)}
+                  className={`flex flex-col items-center gap-1 px-3 py-3 rounded-xl border text-center transition-all ${
+                    userRole === opt.value
+                      ? "border-foreground bg-foreground/5"
+                      : "border-border hover:border-foreground/30"
+                  }`}
+                >
+                  <span className="text-sm font-semibold text-foreground">{opt.label}</span>
+                  <span className="text-[10px] text-muted-foreground">{opt.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button onClick={handleSaveEdit} disabled={saving}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-foreground text-background rounded-lg hover:bg-foreground/90 transition-colors disabled:opacity-50">
             <Save className="w-3.5 h-3.5" /> {saving ? "Salvando..." : "Salvar alterações"}
