@@ -1,4 +1,5 @@
-import { Heart, MessageCircle, BadgeCheck, X, Play, Gift, MoreVertical, Pencil, Trash2, MessageSquareOff, Lock, Crown, Send, Loader2 } from "lucide-react";
+import { Heart, MessageCircle, X, Play, Gift, MoreVertical, Pencil, Trash2, MessageSquareOff, Lock, Crown, Send, Loader2 } from "lucide-react";
+import { VerifiedBadge } from "./VerifiedBadge";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
@@ -293,7 +294,7 @@ const PostCard = ({
             <div>
               <div className="flex items-center gap-1">
                 <span className="text-sm font-medium text-foreground group-hover:underline">{creator.name}</span>
-                {creator.verified && <BadgeCheck className="w-3.5 h-3.5 text-accent" />}
+                {creator.verified && <VerifiedBadge className="w-3.5 h-3.5" />}
               </div>
               <span className="text-xs text-muted-foreground">@{creator.username} · {timeAgo}</span>
             </div>

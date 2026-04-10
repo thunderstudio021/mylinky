@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { Search as SearchIcon, X, BadgeCheck, Users } from "lucide-react";
+import { Search as SearchIcon, X, Users } from "lucide-react";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -98,7 +99,7 @@ const Search = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1">
                     <span className="text-sm font-medium text-foreground truncate">{creator.name}</span>
-                    {creator.verified && <BadgeCheck className="w-3.5 h-3.5 text-accent shrink-0" />}
+                    {creator.verified && <VerifiedBadge className="w-3.5 h-3.5" />}
                   </div>
                   <p className="text-xs text-muted-foreground">@{creator.username}</p>
                 </div>

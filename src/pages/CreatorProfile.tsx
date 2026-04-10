@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
-import { Users, FileText, Heart, Crown, UserPlus, BadgeCheck, UserCheck, Camera, Pencil, Check, X, MessageCircle } from "lucide-react";
+import { Users, FileText, Heart, Crown, UserPlus, UserCheck, Camera, Pencil, Check, X, MessageCircle } from "lucide-react";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import PostCard from "@/components/PostCard";
@@ -224,7 +225,7 @@ const CreatorProfile = () => {
               ) : (
                 <div className="flex items-center gap-1.5 justify-center">
                   <h1 className="text-xl font-semibold text-foreground">{creator.name}</h1>
-                  {creator.verified && <BadgeCheck className="w-4.5 h-4.5 text-accent" />}
+                  {creator.verified && <VerifiedBadge className="w-5 h-5" />}
                   {isOwnProfile && (
                     <button onClick={() => setEditingName(true)} className="p-1 rounded-full hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">
                       <Pencil className="w-3 h-3" />

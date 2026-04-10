@@ -1,5 +1,6 @@
-import { Users, BadgeCheck } from "lucide-react";
+import { Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { VerifiedBadge } from "./VerifiedBadge";
 
 interface CreatorCardProps {
   name: string;
@@ -25,7 +26,7 @@ const CreatorCard = ({ name, username, avatar, category, followers, price, verif
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1">
               <span className="text-sm font-medium text-foreground truncate group-hover:underline">{name}</span>
-              {verified && <BadgeCheck className="w-3.5 h-3.5 text-accent shrink-0" />}
+              {verified && <VerifiedBadge className="w-3.5 h-3.5" />}
             </div>
             <p className="text-xs text-muted-foreground">@{username}</p>
           </div>

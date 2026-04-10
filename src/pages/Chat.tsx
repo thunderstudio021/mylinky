@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Send, MessageCircle } from "lucide-react";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Conversation {
@@ -239,7 +240,7 @@ const Chat = () => {
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground truncate flex items-center gap-1">
               {activeConv.otherUser.name}
-              {activeConv.otherUser.verified && <span className="text-blue-500 text-xs">✓</span>}
+              {activeConv.otherUser.verified && <VerifiedBadge className="w-3.5 h-3.5" />}
             </p>
             <p className="text-[11px] text-muted-foreground truncate">@{activeConv.otherUser.username}</p>
           </div>
@@ -347,7 +348,7 @@ const Chat = () => {
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold text-foreground truncate flex items-center gap-1">
                       {conv.otherUser.name}
-                      {conv.otherUser.verified && <span className="text-blue-500 text-xs">✓</span>}
+                      {conv.otherUser.verified && <VerifiedBadge className="w-3.5 h-3.5" />}
                     </p>
                     <span className="text-[11px] text-muted-foreground shrink-0 ml-2">
                       {formatTime(conv.last_message_at)}

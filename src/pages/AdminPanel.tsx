@@ -9,9 +9,10 @@ import logoImg from "@/assets/logo.png";
 import {
   Menu, X, LayoutDashboard, Users, FileText, Wallet,
   ChevronRight, Search, CheckCircle, XCircle, Eye, Pencil,
-  Trash2, Ban, Shield, TrendingUp, Image, Video, UserCheck,
+  Trash2, Ban, TrendingUp, Image, Video, UserCheck,
   ArrowLeft, Save, Percent, LogOut, Heart, Gift, UserX, Unlock,
 } from "lucide-react";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 
 // ─── Admin Header ───
 const AdminHeader = ({ onMenuToggle }: { onMenuToggle: () => void }) => (
@@ -294,7 +295,7 @@ const DashboardTab = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                {u.verified && <Shield className="w-3.5 h-3.5 text-foreground" />}
+                {u.verified && <VerifiedBadge className="w-3.5 h-3.5" />}
                 <span className="text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString("pt-BR")}</span>
               </div>
             </div>
@@ -592,7 +593,7 @@ const CreatorsTab = () => {
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
                     <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
-                    {c.verified && <Shield className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                    {c.verified && <VerifiedBadge className="w-3.5 h-3.5" />}
                     {c.blocked && <Ban className="w-3.5 h-3.5 text-destructive shrink-0" />}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">@{c.username} · {c.email}</p>
@@ -731,7 +732,7 @@ const UsersTab = () => {
                   <div className="flex items-center gap-1.5">
                     <p className="text-sm font-medium text-foreground truncate">{u.name}</p>
                     {u.is_creator && <UserCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
-                    {u.verified && <Shield className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                    {u.verified && <VerifiedBadge className="w-3.5 h-3.5" />}
                     {u.blocked && <Ban className="w-3.5 h-3.5 text-destructive shrink-0" />}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">@{u.username} · {u.email}</p>
