@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import CreatePostModal from "@/components/CreatePostModal";
 import NotificationPanel, { useUnreadNotifications } from "@/components/NotificationPanel";
 import { useTheme } from "@/hooks/useTheme";
-import logoImg from "@/assets/logo.png";
+import { SiteLogo } from "@/components/SiteLogo";
 import { AppAvatar } from "@/components/AppAvatar";
 
 const Navbar = () => {
@@ -63,7 +63,7 @@ const Navbar = () => {
       {/* Desktop top bar */}
       <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 h-14 items-center justify-between px-6 bg-background/80 backdrop-blur-md border-b border-border">
         <Link to="/" className="flex items-center">
-          <img src={logoImg} alt="Logo" className="h-7 dark:invert" />
+          <SiteLogo className="h-7 object-contain" />
         </Link>
         <div className="flex items-center gap-1">
           {[
@@ -112,7 +112,7 @@ const Navbar = () => {
 
       {/* Mobile top */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 h-12 flex items-center justify-between px-4 bg-background/80 backdrop-blur-md border-b border-border">
-        <Link to="/" className="flex items-center"><img src={logoImg} alt="Logo" className="h-6 dark:invert" /></Link>
+        <Link to="/" className="flex items-center"><SiteLogo className="h-6 object-contain" /></Link>
         <div className="flex items-center gap-3">
           <button onClick={toggleTheme} className="relative text-muted-foreground hover:text-foreground transition-colors">
             {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}

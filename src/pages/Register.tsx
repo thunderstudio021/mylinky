@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2, ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import logoImg from "@/assets/logo.png";
+import { SiteLogo } from "@/components/SiteLogo";
 
 const steps = [
   { title: "Dados pessoais", subtitle: "Como você se chama?" },
@@ -80,7 +80,7 @@ const Register = () => {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-6">
-          <img src={logoImg} alt="Logo" className="h-10 mx-auto mb-2 dark:invert" />
+          <SiteLogo className="h-10 mx-auto mb-2 object-contain" />
         </div>
 
         {/* Progress */}

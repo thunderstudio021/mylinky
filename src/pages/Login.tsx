@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import logoImg from "@/assets/logo.png";
+import { SiteLogo } from "@/components/SiteLogo";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -31,7 +31,7 @@ const Login = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <img src={logoImg} alt="Logo" className="h-10 mx-auto mb-2 dark:invert" />
+          <SiteLogo className="h-10 mx-auto mb-2 object-contain" />
           <p className="text-sm text-muted-foreground">Entre na sua conta</p>
         </div>
 

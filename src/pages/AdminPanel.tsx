@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import logoImg from "@/assets/logo.png";
+import { SiteLogo } from "@/components/SiteLogo";
 import { AppAvatar } from "@/components/AppAvatar";
 import { LazyImage } from "@/components/LazyImage";
 import {
@@ -21,7 +21,7 @@ import { useSiteSettings, applyPrimaryColor, hexToHsl, hslToHex, SITE_DEFAULTS }
 // ─── Admin Header ───
 const AdminHeader = ({ onMenuToggle }: { onMenuToggle: () => void }) => (
   <header className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-4 md:px-6 bg-background border-b border-border">
-    <img src={logoImg} alt="Logo" className="h-7 dark:invert" />
+    <SiteLogo className="h-7 object-contain" />
     <button onClick={onMenuToggle} className="text-foreground p-2 hover:bg-secondary rounded-lg transition-colors">
       <Menu className="w-5 h-5" />
     </button>
