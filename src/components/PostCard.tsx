@@ -492,11 +492,10 @@ const PostCard = ({
 
       {/* Fullscreen Photo */}
       <AnimatePresence>
-        {fullscreen && image && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[999] bg-black/95 flex items-center justify-center" onClick={() => setFullscreen(false)}>
-            <button className="absolute top-5 right-5 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-sm text-white/80 hover:text-white hover:bg-white/20 transition-all" onClick={(e) => { e.stopPropagation(); setFullscreen(false); }}><X className="w-5 h-5" /></button>
+      {fullscreen && image && (
+          <FullscreenOverlay onClose={() => setFullscreen(false)}>
             <img src={image} alt="" className="max-w-full max-h-full object-contain" />
-          </motion.div>
+          </FullscreenOverlay>
         )}
       </AnimatePresence>
 
