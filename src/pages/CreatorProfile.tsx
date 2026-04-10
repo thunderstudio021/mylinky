@@ -312,9 +312,9 @@ const CreatorProfile = () => {
                   </button>
                 )}
 
-                {isSubscribed && (
+                {isSubscribed && creator?.id && (
                   <button
-                    onClick={() => navigate("/chat")}
+                    onClick={() => navigate(`/chat/${creator.id}`)}
                     className="p-2.5 rounded-full bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
                     title="Enviar mensagem"
                   >

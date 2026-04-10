@@ -57,6 +57,7 @@ const AppRoutes = () => (
       <Route path="/dashboard" element={<CreatorRoute><CreatorDashboard /></CreatorRoute>} />
       <Route path="/admin-panel" element={<AdminRoute><AdminPanel /></AdminRoute>} />
       <Route path="/chat" element={<AuthRoute><Chat /></AuthRoute>} />
+      <Route path="/chat/:userId" element={<AuthRoute><Chat /></AuthRoute>} />
       <Route path="/settings" element={<AuthRoute><Settings /></AuthRoute>} />
       <Route path="/referral" element={<AuthRoute><Referral /></AuthRoute>} />
       <Route path="/affiliates" element={<AuthRoute><Affiliates /></AuthRoute>} />

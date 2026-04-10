@@ -82,8 +82,9 @@ const Subscriptions = () => {
                     </div>
                   </button>
                   <button
-                    onClick={() => navigate("/chat")}
+                    onClick={() => navigate(`/chat/${sub.creator_id}`)}
                     className="p-2 rounded-lg bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
+                    title="Enviar mensagem"
                   >
                     <MessageCircle className="w-4 h-4" />
                   </button>
