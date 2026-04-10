@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Copy, Check, Link2, Users, TrendingUp, DollarSign } from "lucide-react";
+import { ArrowLeft, Copy, Check, Link2, Users, TrendingUp, DollarSign, Wallet, Clock, CheckCircle, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +25,17 @@ interface MonthData {
   comissao: number;
 }
 
+interface WithdrawalRequest {
+  id: string;
+  amount: number;
+  bank_name: string;
+  pix_key: string;
+  pix_key_holder_name: string;
+  status: string;
+  created_at: string;
+  reviewed_at: string | null;
+}
+
 const fmt = (v: number) =>
   v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -39,6 +50,15 @@ const Referral = () => {
   const [totalCommission, setTotalCommission] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // Wallet
+  const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
+  const [showWithdrawForm, setShowWithdrawForm] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [pixKey, setPixKey] = useState("");
+  const [pixHolder, setPixHolder] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [submittingWithdraw, setSubmittingWithdraw] = useState(false);
+
   const referralLink = `${window.location.origin}/register?ref=${profile?.username || user?.id?.slice(0, 8)}`;
 
   useEffect(() => {
@@ -47,7 +67,6 @@ const Referral = () => {
     const load = async () => {
       setLoading(true);
 
-      // 1. Load referral relationships
       const { data: rels } = await (supabase as any)
         .from("referral_relationships")
         .select("referred_id, commission_rate, created_at")
@@ -58,7 +77,6 @@ const Referral = () => {
       const ids: string[] = rels.map((r: any) => r.referred_id);
       const relMap = new Map<string, any>(rels.map((r: any) => [r.referred_id, r]));
 
-      // 2. Load referred profiles
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, name, username, avatar_url, is_creator, created_at")
@@ -70,7 +88,6 @@ const Referral = () => {
       }));
       setReferred(enriched);
 
-      // 3. Calc commission from subscriptions of referred creators
       const creatorIds = enriched.filter(r => r.is_creator).map(r => r.id);
       const commissionRateOf = (id: string) =>
         enriched.find(r => r.id === id)?.commission_rate ?? 10;
@@ -82,7 +99,6 @@ const Referral = () => {
           .in("creator_id", creatorIds)
           .eq("status", "active");
 
-        // Monthly chart — last 6 months
         const now = new Date();
         const months: MonthData[] = Array.from({ length: 6 }, (_, i) => {
           const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
@@ -95,10 +111,7 @@ const Referral = () => {
           const rate = commissionRateOf(s.creator_id) / 100;
           const commission = Number(s.amount) * rate;
           total += commission;
-
-          const slot = months.find(
-            (m: any) => m._year === d.getFullYear() && m._month === d.getMonth()
-          );
+          const slot = months.find((m: any) => m._year === d.getFullYear() && m._month === d.getMonth());
           if (slot) (slot as any).comissao += commission;
         });
 
@@ -110,7 +123,18 @@ const Referral = () => {
       setLoading(false);
     };
 
+    const loadWithdrawals = async () => {
+      const { data } = await supabase
+        .from("withdrawal_requests")
+        .select("id, amount, bank_name, pix_key, pix_key_holder_name, status, created_at, reviewed_at")
+        .eq("creator_id", user.id)
+        .eq("requester_type", "referral")
+        .order("created_at", { ascending: false });
+      setWithdrawals((data || []) as WithdrawalRequest[]);
+    };
+
     load();
+    loadWithdrawals();
   }, [user]);
 
   const handleCopy = () => {
@@ -120,7 +144,54 @@ const Referral = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const approvedWithdrawals = withdrawals.filter(w => w.status === "approved");
+  const totalWithdrawn = approvedWithdrawals.reduce((acc, w) => acc + Number(w.amount), 0);
+  const availableBalance = Math.max(0, totalCommission - totalWithdrawn);
+
+  const handleWithdrawSubmit = async () => {
+    const amount = parseFloat(withdrawAmount);
+    if (!amount || amount < 50) { toast.error("Valor mínimo para saque é R$ 50,00"); return; }
+    if (amount > availableBalance) { toast.error("Saldo insuficiente"); return; }
+    if (!pixKey.trim()) { toast.error("Informe a chave PIX"); return; }
+    if (!pixHolder.trim()) { toast.error("Informe o nome do titular"); return; }
+    if (!bankName.trim()) { toast.error("Informe o banco"); return; }
+
+    setSubmittingWithdraw(true);
+    const { error } = await supabase.from("withdrawal_requests").insert({
+      creator_id: user!.id,
+      amount,
+      pix_key: pixKey.trim(),
+      pix_key_holder_name: pixHolder.trim(),
+      bank_name: bankName.trim(),
+      status: "pending",
+      requester_type: "referral",
+    });
+    setSubmittingWithdraw(false);
+
+    if (error) { toast.error("Erro ao solicitar saque: " + error.message); return; }
+    toast.success("Solicitação enviada! Será processada em até 3 dias úteis.");
+    setShowWithdrawForm(false);
+    setWithdrawAmount("");
+    setPixKey("");
+    setPixHolder("");
+    setBankName("");
+    const { data } = await supabase
+      .from("withdrawal_requests")
+      .select("id, amount, bank_name, pix_key, pix_key_holder_name, status, created_at, reviewed_at")
+      .eq("creator_id", user!.id)
+      .eq("requester_type", "referral")
+      .order("created_at", { ascending: false });
+    setWithdrawals((data || []) as WithdrawalRequest[]);
+  };
+
   const creatorsReferred = referred.filter(r => r.is_creator);
+
+  const statusIcon = (s: string) => {
+    if (s === "approved") return <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />;
+    if (s === "rejected") return <XCircle className="w-3.5 h-3.5 text-destructive" />;
+    return <Clock className="w-3.5 h-3.5 text-amber-400" />;
+  };
+  const statusLabel = (s: string) => s === "approved" ? "Aprovado" : s === "rejected" ? "Rejeitado" : "Pendente";
 
   if (!user) return null;
 
@@ -128,7 +199,6 @@ const Referral = () => {
     <div className="min-h-screen bg-background pt-14 md:pt-[72px] pb-24 md:pb-8">
       <div className="max-w-lg mx-auto px-4 md:px-6">
 
-        {/* Header */}
         <div className="flex items-center gap-3 mb-6 pt-2">
           <button onClick={() => navigate(-1)} className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="w-5 h-5" />
@@ -141,7 +211,6 @@ const Referral = () => {
 
         <div className="space-y-4">
 
-          {/* How it works */}
           <div className="bg-card border border-border rounded-xl p-5">
             <div className="flex items-center gap-2 mb-4">
               <Link2 className="w-4 h-4 text-primary" />
@@ -163,7 +232,6 @@ const Referral = () => {
             </div>
           </div>
 
-          {/* Referral link */}
           <div className="bg-card border border-border rounded-xl p-5">
             <label className="text-xs font-medium text-muted-foreground mb-2 block">
               Seu link de indicação
@@ -182,10 +250,9 @@ const Referral = () => {
             </div>
           </div>
 
-          {/* Stats — 3 cards */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { icon: Users,     label: "Indicados",       value: String(referred.length) },
+              { icon: Users,      label: "Indicados",       value: String(referred.length) },
               { icon: TrendingUp, label: "Criadores ativos", value: String(creatorsReferred.length) },
               { icon: DollarSign, label: "Comissão",         value: `R$ ${fmt(totalCommission)}` },
             ].map(({ icon: Icon, label, value }) => (
@@ -199,7 +266,6 @@ const Referral = () => {
             ))}
           </div>
 
-          {/* Commission chart */}
           {!loading && creatorsReferred.length > 0 && (
             <div className="bg-card border border-border rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
@@ -218,42 +284,111 @@ const Referral = () => {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={v => `R$${v}`}
-                  />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={v => `R$${v}`} />
                   <Tooltip
-                    contentStyle={{
-                      background: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
+                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
                     formatter={(v: number) => [`R$ ${fmt(v)}`, "Comissão"]}
                   />
-                  <Area
-                    type="monotone"
-                    dataKey="comissao"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    fill="url(#refGrad)"
-                    dot={{ fill: "hsl(var(--primary))", r: 3, strokeWidth: 0 }}
-                    activeDot={{ r: 5, strokeWidth: 0 }}
-                  />
+                  <Area type="monotone" dataKey="comissao" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#refGrad)"
+                    dot={{ fill: "hsl(var(--primary))", r: 3, strokeWidth: 0 }} activeDot={{ r: 5, strokeWidth: 0 }} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           )}
 
-          {/* Referred users list */}
+          {/* Carteira Digital */}
+          {!loading && totalCommission > 0 && (
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-border">
+                <div className="flex items-center gap-2 mb-1">
+                  <Wallet className="w-4 h-4 text-primary" />
+                  <h3 className="text-sm font-semibold text-foreground">Carteira de Indicação</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">Gerencie seus ganhos de comissão</p>
+              </div>
+              <div className="grid grid-cols-3 divide-x divide-border border-b border-border">
+                {[
+                  { label: "Total ganho",  value: `R$ ${fmt(totalCommission)}`,   color: "text-foreground" },
+                  { label: "Sacado",       value: `R$ ${fmt(totalWithdrawn)}`,     color: "text-muted-foreground" },
+                  { label: "Disponível",   value: `R$ ${fmt(availableBalance)}`,   color: "text-primary" },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="px-4 py-3 text-center">
+                    <p className={`text-base font-bold ${color}`}>{value}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="p-5">
+                {!showWithdrawForm ? (
+                  <button
+                    onClick={() => setShowWithdrawForm(true)}
+                    disabled={availableBalance < 50}
+                    className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Solicitar Saque
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-semibold text-foreground">Dados para transferência PIX</h4>
+                    <div className="space-y-2">
+                      <input value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} type="number" min="50" max={availableBalance}
+                        placeholder={`Valor (mín. R$ 50,00 · disponível R$ ${fmt(availableBalance)})`}
+                        className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                      <input value={bankName} onChange={e => setBankName(e.target.value)} placeholder="Banco (ex: Nubank, Itaú...)"
+                        className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                      <input value={pixKey} onChange={e => setPixKey(e.target.value)} placeholder="Chave PIX (CPF, email, telefone ou aleatória)"
+                        className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                      <input value={pixHolder} onChange={e => setPixHolder(e.target.value)} placeholder="Nome completo do titular da conta"
+                        className="w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30" />
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowWithdrawForm(false)}
+                        className="flex-1 py-2 text-sm text-muted-foreground border border-border rounded-lg hover:bg-secondary transition-colors">
+                        Cancelar
+                      </button>
+                      <button onClick={handleWithdrawSubmit} disabled={submittingWithdraw}
+                        className="flex-1 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50">
+                        {submittingWithdraw ? "Enviando..." : "Confirmar"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Histórico de saques */}
+          {!loading && withdrawals.length > 0 && (
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-border">
+                <h3 className="text-sm font-semibold text-foreground">Histórico de saques</h3>
+              </div>
+              <div className="divide-y divide-border">
+                {withdrawals.map(w => (
+                  <div key={w.id} className="flex items-center gap-3 px-4 py-3">
+                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                      {statusIcon(w.status)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">R$ {fmt(Number(w.amount))}</p>
+                      <p className="text-xs text-muted-foreground">{w.bank_name} · PIX: {w.pix_key}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(w.created_at).toLocaleDateString("pt-BR")}</p>
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
+                      w.status === "approved" ? "bg-emerald-500/10 text-emerald-400"
+                      : w.status === "rejected" ? "bg-destructive/10 text-destructive"
+                      : "bg-amber-500/10 text-amber-400"
+                    }`}>
+                      {statusLabel(w.status)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Seus indicados */}
           {!loading && referred.length > 0 && (
             <div className="bg-card border border-border rounded-xl overflow-hidden">
               <div className="px-5 py-3.5 border-b border-border">
@@ -262,21 +397,13 @@ const Referral = () => {
               <div className="divide-y divide-border">
                 {referred.map(r => (
                   <div key={r.id} className="flex items-center gap-3 px-4 py-3">
-                    <AppAvatar
-                      src={r.avatar_url}
-                      name={r.name}
-                      className="w-9 h-9 shrink-0"
-                      sizePx={72}
-                      textClassName="text-xs"
-                    />
+                    <AppAvatar src={r.avatar_url} name={r.name} className="w-9 h-9 shrink-0" sizePx={72} textClassName="text-xs" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{r.name}</p>
                       <p className="text-xs text-muted-foreground">@{r.username}</p>
                     </div>
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
-                      r.is_creator
-                        ? "text-primary bg-primary/10"
-                        : "text-muted-foreground bg-secondary"
+                      r.is_creator ? "text-primary bg-primary/10" : "text-muted-foreground bg-secondary"
                     }`}>
                       {r.is_creator ? "Criador" : "Usuário"}
                     </span>
@@ -286,14 +413,12 @@ const Referral = () => {
             </div>
           )}
 
-          {/* Loading */}
           {loading && (
             <div className="flex items-center justify-center py-10">
               <div className="w-5 h-5 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
             </div>
           )}
 
-          {/* Empty state */}
           {!loading && referred.length === 0 && (
             <div className="bg-card border border-border rounded-xl p-10 text-center">
               <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
