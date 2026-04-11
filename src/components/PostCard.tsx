@@ -281,7 +281,31 @@ const PostCard = ({
   };
 
   const handleGiftConfirm = async (amount: number) => {
-    if (!currentUserId) return;
+    if (!currentUserId || !creatorId) return;
+
+    // 1. Insert gift record
+    const { error } = await supabase.from("gifts").insert({
+      sender_id: currentUserId,
+      creator_id: creatorId,
+      post_id: id ? String(id) : null,
+      amount,
+      payment_method: "pix",
+    });
+
+    if (error) {
+      toast.error("Erro ao registrar presente: " + error.message);
+      return;
+    }
+
+    // 2. Notify the creator
+    await supabase.from("notifications").insert({
+      user_id: creatorId,
+      type: "gift",
+      title: "Você recebeu um presente!",
+      message: `Alguém te enviou R$ ${amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} de presente.`,
+      read: false,
+    });
+
     toast.success("Presente enviado!");
   };
 
