@@ -133,7 +133,7 @@ const Navbar = () => {
                 <button
                   key="create"
                   onClick={() => setCreateOpen(true)}
-                  className="flex items-center justify-center w-10 h-10 rounded-full bg-foreground text-background -mt-5 shadow-lg">
+                  className="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-white -mt-5 shadow-lg">
                   
                   <Plus className="w-5 h-5" />
                 </button>);
