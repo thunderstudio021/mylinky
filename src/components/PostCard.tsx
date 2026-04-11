@@ -297,12 +297,21 @@ const PostCard = ({
       return;
     }
 
-    // 2. Notify the creator
+    // 2. Fetch sender name for the notification
+    const { data: senderProfile } = await supabase
+      .from("profiles")
+      .select("name")
+      .eq("id", currentUserId)
+      .single();
+
+    const senderName = senderProfile?.name || "Alguém";
+
+    // 3. Notify the creator with sender's name
     await supabase.from("notifications").insert({
       user_id: creatorId,
       type: "gift",
       title: "Você recebeu um presente!",
-      message: `Alguém te enviou R$ ${amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} de presente.`,
+      message: `${senderName} te enviou R$ ${amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} de presente.`,
       read: false,
     });
 
