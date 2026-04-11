@@ -675,22 +675,26 @@ const UsersTab = () => {
     if (!editing) return;
     setSaving(true);
 
-    // 1. Update profile fields + is_creator + commission_rate
-    const { error } = await supabase.from("profiles").update({
+    // 1. Update profile fields
+    const { error: profileError } = await supabase.from("profiles").update({
       name: editing.name,
       username: editing.username,
       bio: editing.bio,
-      is_creator: userRole === "criador",
+      is_creator: userRole === "criador" || userRole === "admin",
       verified: editing.verified,
       commission_rate: commissionRate,
     }).eq("id", editing.id);
-    if (error) { toast.error("Erro: " + error.message); setSaving(false); return; }
+    if (profileError) { toast.error("Erro ao salvar perfil: " + profileError.message); setSaving(false); return; }
 
-    // 2. Handle admin role
+    // 2. Handle admin role — delete first then insert to avoid constraint issues
+    const { error: delError } = await (supabase as any)
+      .from("user_roles").delete().eq("user_id", editing.id).eq("role", "admin");
+    if (delError) { toast.error("Erro ao atualizar role: " + delError.message); setSaving(false); return; }
+
     if (userRole === "admin") {
-      await (supabase as any).from("user_roles").upsert({ user_id: editing.id, role: "admin" }, { onConflict: "user_id,role" });
-    } else {
-      await (supabase as any).from("user_roles").delete().eq("user_id", editing.id).eq("role", "admin");
+      const { error: insError } = await (supabase as any)
+        .from("user_roles").insert({ user_id: editing.id, role: "admin" });
+      if (insError) { toast.error("Erro ao definir admin: " + insError.message); setSaving(false); return; }
     }
 
     setSaving(false);
