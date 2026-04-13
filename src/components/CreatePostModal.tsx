@@ -1,10 +1,11 @@
 import { useState, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Camera, Video, FileText, BarChart3, X, Image, Upload, Eye, Crown, DollarSign, ArrowLeft, Send } from "lucide-react";
+import { Camera, Video, FileText, BarChart3, X, Image, Upload, Eye, Crown, DollarSign, ArrowLeft, Send, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppAvatar } from "./AppAvatar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { compressImage, compressVideo, formatBytes } from "@/lib/mediaCompressor";
 
 type PostType = "free" | "subscribers" | "ppv" | "ppv-subscribers";
 type ContentType = "photo" | "video" | "text" | "poll";
@@ -31,6 +32,10 @@ const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [pollOptions, setPollOptions] = useState(["", ""]);
+  const [compressing, setCompressing] = useState(false);
+  const [compressProgress, setCompressProgress] = useState(0);
+  const [originalSize, setOriginalSize] = useState<number | null>(null);
+  const [compressedSize, setCompressedSize] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
@@ -42,6 +47,10 @@ const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
     setMediaPreview(null);
     setMediaFile(null);
     setPollOptions(["", ""]);
+    setCompressing(false);
+    setCompressProgress(0);
+    setOriginalSize(null);
+    setCompressedSize(null);
   };
 
   const handleClose = () => {
@@ -57,12 +66,49 @@ const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setMediaFile(file);
-    const url = URL.createObjectURL(file);
-    setMediaPreview(url);
+
+    setOriginalSize(file.size);
+    setCompressedSize(null);
+
+    try {
+      let finalFile = file;
+
+      if (contentType === "photo") {
+        setCompressing(true);
+        setCompressProgress(0);
+        finalFile = await compressImage(file);
+        setCompressedSize(finalFile.size);
+        setCompressing(false);
+        setCompressProgress(100);
+      } else if (contentType === "video") {
+        // Skip compression for small files (< 20 MB)
+        if (file.size > 20 * 1024 * 1024) {
+          setCompressing(true);
+          setCompressProgress(0);
+          try {
+            finalFile = await compressVideo(file, (p) => setCompressProgress(p));
+            setCompressedSize(finalFile.size);
+          } catch (err) {
+            // Compression failed — use original file
+            console.warn("Video compression failed, using original:", err);
+            finalFile = file;
+            toast.warning("Compressão de vídeo falhou. Usando arquivo original.");
+          }
+          setCompressing(false);
+          setCompressProgress(100);
+        }
+      }
+
+      setMediaFile(finalFile);
+      const url = URL.createObjectURL(finalFile);
+      setMediaPreview(url);
+    } catch (err) {
+      setCompressing(false);
+      console.error("File handling error:", err);
+    }
   };
 
   const needsPostType = contentType === "photo" || contentType === "video";
@@ -234,21 +280,63 @@ const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
                         onChange={handleFileSelect}
                         className="hidden"
                       />
-                      {mediaPreview ? (
-                        <div className="relative rounded-lg overflow-hidden border border-border">
-                          {contentType === "photo" ? (
-                            <img src={mediaPreview} alt="" className="w-full max-h-64 object-cover" />
-                          ) : (
-                            <video src={mediaPreview} className="w-full max-h-64 object-cover" controls />
-                          )}
-                          <button
-                            onClick={() => { setMediaPreview(null); setMediaFile(null); }}
-                            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-background/80 flex items-center justify-center text-foreground"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+
+                      {/* Compression progress overlay */}
+                      {compressing && (
+                        <div className="w-full py-8 border-2 border-dashed border-primary/40 rounded-lg flex flex-col items-center gap-3 bg-secondary/40">
+                          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                          <p className="text-sm font-medium text-foreground">
+                            {contentType === "video" ? "Comprimindo vídeo..." : "Comprimindo imagem..."}
+                          </p>
+                          <div className="w-48 h-1.5 bg-border rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary rounded-full transition-all duration-300"
+                              style={{ width: `${compressProgress}%` }}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">{compressProgress}%</p>
                         </div>
-                      ) : (
+                      )}
+
+                      {/* Media preview */}
+                      {!compressing && mediaPreview && (
+                        <div className="space-y-1.5">
+                          <div className="relative rounded-lg overflow-hidden border border-border">
+                            {contentType === "photo" ? (
+                              <img src={mediaPreview} alt="" className="w-full max-h-64 object-cover" />
+                            ) : (
+                              <video src={mediaPreview} className="w-full max-h-64 object-cover" controls />
+                            )}
+                            <button
+                              onClick={() => {
+                                setMediaPreview(null);
+                                setMediaFile(null);
+                                setOriginalSize(null);
+                                setCompressedSize(null);
+                                setCompressProgress(0);
+                              }}
+                              className="absolute top-2 right-2 w-7 h-7 rounded-full bg-background/80 flex items-center justify-center text-foreground"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                          {/* Compression stats */}
+                          {originalSize && compressedSize && (
+                            <p className="text-xs text-muted-foreground text-center">
+                              {formatBytes(originalSize)} → {formatBytes(compressedSize)}{" "}
+                              <span className="text-green-500 font-medium">
+                                (-{Math.round((1 - compressedSize / originalSize) * 100)}%)
+                              </span>
+                            </p>
+                          )}
+                          {originalSize && !compressedSize && (
+                            <p className="text-xs text-muted-foreground text-center">{formatBytes(originalSize)}</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Upload trigger */}
+                      {!compressing && !mediaPreview && (
                         <button
                           onClick={() => fileInputRef.current?.click()}
                           className="w-full py-10 border-2 border-dashed border-border rounded-lg flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
@@ -338,11 +426,16 @@ const CreatePostModal = ({ open, onClose }: CreatePostModalProps) => {
                 <div className="p-4 border-t border-border">
                   <button
                     onClick={handlePublish}
-                    disabled={publishing}
+                    disabled={publishing || compressing}
                     className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-medium bg-foreground text-background rounded-md hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Send className="w-4 h-4" />
-                    {publishing ? "Publicando..." : "Publicar"}
+                    {publishing ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Publicando...</>
+                    ) : compressing ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Comprimindo...</>
+                    ) : (
+                      <><Send className="w-4 h-4" /> Publicar</>
+                    )}
                   </button>
                 </div>
               </div>
