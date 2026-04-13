@@ -24,8 +24,8 @@ const postTypeOptions: { value: PostType; label: string; icon: any; description:
   { value: "ppv",         label: "Pague para ver", icon: DollarSign, description: "Defina um valor para desbloquear" },
 ];
 
-const SUPABASE_URL = "https://duotsmeomtykyjzmidqq.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1b3RzbWVvbXR5a3lqem1pZHFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MzE5NDMsImV4cCI6MjA4ODQwNzk0M30.on2mp4y8ZH1NpmpzrWzxzmx34Ve9_0l6c4c8pn8lhc4";
+const SUPABASE_URL = "https://tefijammwrzsemqyxtud.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_WaNVDptVIVhy1kPnhi0l_w_YPt-1fA5";
 
 /** Upload via XHR so we get real progress events */
 async function uploadWithProgress(
