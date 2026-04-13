@@ -24,6 +24,9 @@ const postTypeOptions: { value: PostType; label: string; icon: any; description:
   { value: "ppv",         label: "Pague para ver", icon: DollarSign, description: "Defina um valor para desbloquear" },
 ];
 
+const SUPABASE_URL = "https://duotsmeomtykyjzmidqq.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1b3RzbWVvbXR5a3lqem1pZHFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MzE5NDMsImV4cCI6MjA4ODQwNzk0M30.on2mp4y8ZH1NpmpzrWzxzmx34Ve9_0l6c4c8pn8lhc4";
+
 /** Upload via XHR so we get real progress events */
 async function uploadWithProgress(
   file: File,
@@ -31,10 +34,8 @@ async function uploadWithProgress(
   onProgress: (pct: number) => void
 ): Promise<string> {
   const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token ?? "";
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-  const anonKey    = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
-  const uploadUrl  = `${supabaseUrl}/storage/v1/object/media/${storagePath}`;
+  const token     = session?.access_token ?? "";
+  const uploadUrl = `${SUPABASE_URL}/storage/v1/object/media/${storagePath}`;
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -45,7 +46,7 @@ async function uploadWithProgress(
 
     xhr.addEventListener("load", () => {
       if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(`${supabaseUrl}/storage/v1/object/public/media/${storagePath}`);
+        resolve(`${SUPABASE_URL}/storage/v1/object/public/media/${storagePath}`);
       } else {
         try {
           const body = JSON.parse(xhr.responseText);
@@ -60,7 +61,7 @@ async function uploadWithProgress(
 
     xhr.open("POST", uploadUrl);
     xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-    xhr.setRequestHeader("apikey", anonKey);
+    xhr.setRequestHeader("apikey", SUPABASE_ANON_KEY);
     xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
     xhr.setRequestHeader("x-upsert", "false");
     xhr.send(file);
