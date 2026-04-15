@@ -14,6 +14,7 @@ import {
   Trash2, Ban, TrendingUp, Image, Video, UserCheck,
   ArrowLeft, Save, Percent, LogOut, Heart, Gift, UserX, Unlock,
   Settings2, Upload, Palette, Globe, Users2,
+  CreditCard, Link2, Plug, RefreshCw, Loader2, FlaskConical,
 } from "lucide-react";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { useSiteSettings, applyPrimaryColor, hexToHsl, hslToHex, SITE_DEFAULTS } from "@/hooks/useSiteSettings";
@@ -44,6 +45,7 @@ const AdminSidebar = ({
     { id: "posts", label: "Publicações", icon: FileText },
     { id: "banners", label: "Banners", icon: Image },
     { id: "affiliates-admin", label: "Indicados", icon: Users2 },
+    { id: "pagamentos", label: "Pagamentos", icon: CreditCard },
     { id: "configuracoes", label: "Configurações", icon: Settings2 },
   ];
 
@@ -1615,6 +1617,281 @@ const ConfiguracoesTab = () => {
   );
 };
 
+// ─── Pagamentos Tab ───
+const PagamentosTab = () => {
+  const { settings, refresh: refreshSettings } = useSiteSettings();
+  const [mp, setMp] = useState({ enabled: false, access_token: "", public_key: "" });
+  const [appmax, setAppmax] = useState({ enabled: false, api_key: "", app_id: "", client_id: "", client_secret: "", is_sandbox: false, copied_webhook: false, generating: false });
+  const [saving, setSaving] = useState<"mp" | "appmax" | "testmode" | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    (supabase as any).from("payment_gateways").select("*").then(({ data }: any) => {
+      if (!data) return;
+      const mpRow = data.find((r: any) => r.gateway === "mercadopago");
+      const amRow = data.find((r: any) => r.gateway === "appmax");
+      if (mpRow) setMp({ enabled: mpRow.enabled, access_token: mpRow.credentials?.access_token ?? "", public_key: mpRow.credentials?.public_key ?? "" });
+      if (amRow) setAppmax({ enabled: amRow.enabled, api_key: amRow.credentials?.api_key ?? "", app_id: amRow.credentials?.app_id ?? "", client_id: amRow.credentials?.client_id ?? "", client_secret: amRow.credentials?.client_secret ?? "", is_sandbox: amRow.credentials?.is_sandbox ?? false, copied_webhook: false, generating: false });
+      setLoaded(true);
+    });
+  }, []);
+
+  const toggleTestMode = async () => {
+    setSaving("testmode");
+    const next = !settings.payment_test_mode;
+    await (supabase as any).from("site_settings").update({ payment_test_mode: next }).eq("id", (settings as any).id);
+    await refreshSettings();
+    setSaving(null);
+    toast.success(next ? "Modo teste ativado — pagamentos simulados" : "Modo teste desativado");
+  };
+
+  const saveMp = async () => {
+    setSaving("mp");
+    await (supabase as any).from("payment_gateways").upsert(
+      { gateway: "mercadopago", enabled: mp.enabled, credentials: { access_token: mp.access_token, public_key: mp.public_key } },
+      { onConflict: "gateway" }
+    );
+    setSaving(null);
+    toast.success("Mercado Pago salvo");
+  };
+
+  const saveAppmax = async () => {
+    setSaving("appmax");
+    await (supabase as any).from("payment_gateways").upsert(
+      { gateway: "appmax", enabled: appmax.enabled, credentials: { api_key: appmax.api_key, app_id: appmax.app_id, client_id: appmax.client_id, client_secret: appmax.client_secret, is_sandbox: appmax.is_sandbox } },
+      { onConflict: "gateway" }
+    );
+    setSaving(null);
+    toast.success("AppMax salvo");
+  };
+
+  const fieldClass = "w-full px-3 py-2 text-sm bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 font-mono";
+
+  return (
+    <div className="p-4 md:p-6 space-y-6 max-w-2xl mx-auto">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Gateways de Pagamento</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">Configure as chaves de integração. Os valores são salvos de forma segura no banco.</p>
+      </div>
+
+      {/* ── Modo Teste ── */}
+      <div className={`border rounded-xl overflow-hidden transition-colors ${settings.payment_test_mode ? "border-yellow-500/40 bg-yellow-500/5" : "border-border bg-card"}`}>
+        <div className="flex items-center justify-between px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${settings.payment_test_mode ? "bg-yellow-500/15" : "bg-secondary"}`}>
+              <FlaskConical className={`w-4 h-4 ${settings.payment_test_mode ? "text-yellow-400" : "text-muted-foreground"}`} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                Modo Teste
+                {settings.payment_test_mode && (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 uppercase tracking-wider">Ativo</span>
+                )}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {settings.payment_test_mode
+                  ? "Todos os pagamentos são simulados — assinaturas, presentes e PPV são ativados sem cobrar."
+                  : "Ative para simular pagamentos sem gateway. Use para testes antes de ir ao ar."}
+              </p>
+            </div>
+          </div>
+          <button onClick={toggleTestMode} disabled={saving === "testmode"}
+            className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ${settings.payment_test_mode ? "bg-yellow-400" : "bg-secondary border border-border"}`}>
+            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${settings.payment_test_mode ? "left-[26px]" : "left-0.5"}`} />
+          </button>
+        </div>
+        {settings.payment_test_mode && (
+          <div className="px-5 pb-4">
+            <p className="text-xs text-yellow-400/80 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2 leading-relaxed">
+              ⚠️ Desative o modo teste antes de aceitar pagamentos reais. Com ele ativo, nenhuma cobrança é realizada.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Mercado Pago */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-[#009ee3]/10 flex items-center justify-center">
+              <CreditCard className="w-4 h-4 text-[#009ee3]" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Mercado Pago</p>
+              <p className="text-xs text-muted-foreground">PIX, cartão e boleto</p>
+            </div>
+          </div>
+          <button onClick={() => setMp(p => ({ ...p, enabled: !p.enabled }))}
+            className={`relative w-11 h-6 rounded-full transition-colors ${mp.enabled ? "bg-primary" : "bg-secondary border border-border"}`}>
+            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${mp.enabled ? "left-[22px]" : "left-0.5"}`} />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Unlock className="w-3 h-3" /> Access Token (produção)</label>
+            <input type="password" value={mp.access_token} onChange={e => setMp(p => ({ ...p, access_token: e.target.value }))}
+              placeholder="APP_USR-..." className={fieldClass} autoComplete="off" />
+            <p className="text-[11px] text-muted-foreground">Encontre em: Mercado Pago → Sua conta → Credenciais → Produção</p>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Link2 className="w-3 h-3" /> Public Key (produção)</label>
+            <input type="text" value={mp.public_key} onChange={e => setMp(p => ({ ...p, public_key: e.target.value }))}
+              placeholder="APP_USR-..." className={fieldClass} autoComplete="off" />
+          </div>
+          <button onClick={saveMp} disabled={saving === "mp"}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50">
+            {saving === "mp" ? <><Plug className="w-4 h-4 animate-pulse" /> Salvando…</> : <><Save className="w-4 h-4" /> Salvar Mercado Pago</>}
+          </button>
+        </div>
+      </div>
+
+      {/* AppMax */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center">
+              <CreditCard className="w-4 h-4 text-purple-500" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">AppMax</p>
+              <p className="text-xs text-muted-foreground">PIX e cartão de crédito</p>
+            </div>
+          </div>
+          <button onClick={() => setAppmax(p => ({ ...p, enabled: !p.enabled }))}
+            className={`relative w-11 h-6 rounded-full transition-colors ${appmax.enabled ? "bg-primary" : "bg-secondary border border-border"}`}>
+            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${appmax.enabled ? "left-[22px]" : "left-0.5"}`} />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          {/* Sandbox toggle */}
+          <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg border border-border">
+            <div>
+              <p className="text-xs font-medium text-foreground">Ambiente Sandbox (Teste)</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {appmax.is_sandbox ? "Usando: breakingcode.sandboxappmax.com.br" : "Usando: admin.appmax.com.br (produção)"}
+              </p>
+            </div>
+            <button onClick={() => setAppmax(p => ({ ...p, is_sandbox: !p.is_sandbox }))}
+              className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${appmax.is_sandbox ? "bg-orange-500" : "bg-secondary border border-border"}`}>
+              <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${appmax.is_sandbox ? "left-[22px]" : "left-0.5"}`} />
+            </button>
+          </div>
+
+          {/* Webhook URL */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Link2 className="w-3 h-3" /> URL do Webhook (configure no painel AppMax)</label>
+            <div className="flex gap-2">
+              <input readOnly value={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/appmax-webhook`}
+                className="flex-1 px-3 py-2 text-xs bg-secondary border border-border rounded-lg text-muted-foreground font-mono truncate" />
+              <button onClick={() => {
+                navigator.clipboard.writeText(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/appmax-webhook`);
+                setAppmax(p => ({ ...p, copied_webhook: true }));
+                setTimeout(() => setAppmax(p => ({ ...p, copied_webhook: false })), 2500);
+              }} className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-secondary border border-border rounded-lg hover:bg-secondary/80 whitespace-nowrap">
+                {appmax.copied_webhook ? "Copiado ✓" : "Copiar"}
+              </button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">Cole esta URL em: AppMax → App → Configurações → URLs de Integração → Webhook de Pagamento</p>
+          </div>
+
+          {/* Client ID */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Unlock className="w-3 h-3" /> Client ID</label>
+            <input type="text" value={appmax.client_id} onChange={e => setAppmax(p => ({ ...p, client_id: e.target.value }))}
+              placeholder="ex: 778683f2796943dea9fde169996e697f" className={fieldClass} autoComplete="off" />
+            <p className="text-[11px] text-muted-foreground">Recebido no e-mail de credenciais AppMax</p>
+          </div>
+
+          {/* Client Secret */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Unlock className="w-3 h-3" /> Client Secret</label>
+            <input type="password" value={appmax.client_secret} onChange={e => setAppmax(p => ({ ...p, client_secret: e.target.value }))}
+              placeholder="ex: a626037052fb4180a09975fefdd5a5ca" className={fieldClass} autoComplete="off" />
+            <p className="text-[11px] text-muted-foreground">Recebido no e-mail de credenciais AppMax</p>
+          </div>
+
+          {/* App UUID */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Link2 className="w-3 h-3" /> App UUID</label>
+            <input type="text" value={appmax.app_id} onChange={e => setAppmax(p => ({ ...p, app_id: e.target.value }))}
+              placeholder="ex: 634a289e-c734-4694-908b-79fb2bf37959" className={fieldClass} autoComplete="off" />
+            <p className="text-[11px] text-muted-foreground">App UUID (não o Numerical ID) — recebido no e-mail</p>
+          </div>
+
+          {/* Access Token (generated) */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Unlock className="w-3 h-3" /> Access Token (gerado automaticamente)</label>
+            <div className="flex gap-2">
+              <input readOnly value={appmax.api_key ? "••••••••••••••••••••" : "Não gerado"}
+                className={`flex-1 ${fieldClass} ${appmax.api_key ? "text-green-500" : "text-muted-foreground"}`} />
+              <button
+                onClick={async () => {
+                  if (!appmax.client_id || !appmax.client_secret) { toast.error("Preencha Client ID e Client Secret primeiro"); return; }
+                  await (supabase as any).from("payment_gateways").upsert(
+                    { gateway: "appmax", enabled: appmax.enabled, credentials: { api_key: appmax.api_key, app_id: appmax.app_id, client_id: appmax.client_id, client_secret: appmax.client_secret, is_sandbox: appmax.is_sandbox } },
+                    { onConflict: "gateway" }
+                  );
+                  setAppmax(p => ({ ...p, generating: true }));
+                  try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/appmax-checkout`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+                      body: JSON.stringify({ action: "generate_token" }),
+                    });
+                    const data = await res.json();
+                    if (!data.ok) throw new Error(data.error || "Erro ao gerar token");
+                    setAppmax(p => ({ ...p, api_key: data.access_token, generating: false }));
+                    toast.success("Token gerado com sucesso!");
+                  } catch (err: any) {
+                    toast.error(err.message || "Erro ao gerar token");
+                    setAppmax(p => ({ ...p, generating: false }));
+                  }
+                }}
+                disabled={appmax.generating}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 whitespace-nowrap"
+              >
+                {appmax.generating ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Gerando…</> : <><RefreshCw className="w-3.5 h-3.5" />Gerar Token</>}
+              </button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">Clique "Gerar Token" após preencher Client ID e Client Secret. O token expira em 1h — gere novamente se necessário.</p>
+          </div>
+
+          <button onClick={saveAppmax} disabled={saving === "appmax"}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50">
+            {saving === "appmax" ? <><Plug className="w-4 h-4 animate-pulse" /> Salvando…</> : <><Save className="w-4 h-4" /> Salvar AppMax</>}
+          </button>
+        </div>
+      </div>
+
+      {/* Status summary */}
+      {loaded && (
+        <div className="bg-card border border-border rounded-xl p-5">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Status</p>
+          <div className="space-y-2">
+            {[
+              { label: "Mercado Pago", enabled: mp.enabled, configured: !!mp.access_token },
+              { label: "AppMax", enabled: appmax.enabled, configured: !!appmax.api_key },
+            ].map(g => (
+              <div key={g.label} className="flex items-center justify-between">
+                <span className="text-sm text-foreground">{g.label}</span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${g.configured ? "bg-green-500/10 text-green-500" : "bg-secondary text-muted-foreground"}`}>
+                    {g.configured ? "Configurado" : "Sem chaves"}
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${g.enabled ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"}`}>
+                    {g.enabled ? "Ativo" : "Inativo"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Main Admin Panel ───
 const AdminPanel = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1636,6 +1913,7 @@ const AdminPanel = () => {
       case "posts": return <PostsTab />;
       case "banners": return <BannersTab />;
       case "affiliates-admin": return <AffiliatesAdminTab />;
+      case "pagamentos": return <PagamentosTab />;
       case "configuracoes": return <ConfiguracoesTab />;
       default: return <DashboardTab />;
     }

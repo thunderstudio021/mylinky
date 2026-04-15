@@ -249,12 +249,36 @@ const PostCard = ({
 
   const handleSubscribeConfirm = async (plan: "monthly" | "yearly", method: "pix" | "credit_card") => {
     if (!currentUserId || !creatorId) return;
-    const amount = plan === "monthly" ? (creatorPriceMonthly || 0) : (creatorPriceYearly || 0);
-    await supabase.from("subscriptions").insert({
-      subscriber_id: currentUserId, creator_id: creatorId, plan, amount, payment_method: method,
-    });
+
+    const { data: existing } = await supabase
+      .from("subscriptions")
+      .select("id")
+      .eq("subscriber_id", currentUserId)
+      .eq("creator_id", creatorId)
+      .eq("status", "active")
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle();
+
+    if (!existing) {
+      const amount = plan === "monthly" ? (creatorPriceMonthly || 0) : (creatorPriceYearly || 0);
+      const expiresAt = new Date();
+      if (plan === "yearly") { expiresAt.setFullYear(expiresAt.getFullYear() + 1); }
+      else { expiresAt.setMonth(expiresAt.getMonth() + 1); }
+
+      const { error } = await supabase.from("subscriptions").upsert({
+        subscriber_id: currentUserId,
+        creator_id: creatorId,
+        plan,
+        amount,
+        payment_method: method,
+        status: "active",
+        expires_at: expiresAt.toISOString(),
+      }, { onConflict: "subscriber_id,creator_id" });
+
+      if (error) { toast.error("Erro ao ativar assinatura"); throw error; }
+    }
+
     setLocalSubscribed(true);
-    toast.success("Assinatura ativada!");
     onUnlocked?.();
   };
 
@@ -532,8 +556,8 @@ const PostCard = ({
         )}
       </AnimatePresence>
 
-      <GiftModal open={giftOpen} onClose={() => setGiftOpen(false)} creatorName={creator.name} onConfirm={handleGiftConfirm} />
-      <SubscribeModal open={subscribeOpen} onClose={() => setSubscribeOpen(false)} creatorName={creator.name} priceMonthly={creatorPriceMonthly || 0} priceYearly={creatorPriceYearly || 0} onConfirm={handleSubscribeConfirm} />
+      <GiftModal open={giftOpen} onClose={() => setGiftOpen(false)} creatorName={creator.name} creatorId={creatorId} onConfirm={handleGiftConfirm} />
+      <SubscribeModal open={subscribeOpen} onClose={() => setSubscribeOpen(false)} creatorName={creator.name} creatorId={creatorId} priceMonthly={creatorPriceMonthly || 0} priceYearly={creatorPriceYearly || 0} onConfirm={handleSubscribeConfirm} />
       <PaymentModal open={paymentOpen} onClose={() => setPaymentOpen(false)} amount={price || 0} onConfirm={handlePaymentConfirm} />
     </>
   );

@@ -89,13 +89,38 @@ const CreatorProfile = () => {
 
   const handleSubscribeConfirm = async (plan: "monthly" | "yearly", method: "pix" | "credit_card") => {
     if (!user || !creator) return;
-    const amount = plan === "monthly" ? creator.price_monthly : creator.price_yearly;
-    await supabase.from("subscriptions").insert({
-      subscriber_id: user.id, creator_id: creator.id, plan, amount, payment_method: method,
-    });
+
+    // Check if the gateway already activated the subscription (PIX/card polling)
+    const { data: existing } = await supabase
+      .from("subscriptions")
+      .select("id")
+      .eq("subscriber_id", user.id)
+      .eq("creator_id", creator.id)
+      .eq("status", "active")
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle();
+
+    if (!existing) {
+      const amount = plan === "monthly" ? creator.price_monthly : creator.price_yearly;
+      const expiresAt = new Date();
+      if (plan === "yearly") { expiresAt.setFullYear(expiresAt.getFullYear() + 1); }
+      else { expiresAt.setMonth(expiresAt.getMonth() + 1); }
+
+      const { error } = await supabase.from("subscriptions").upsert({
+        subscriber_id: user.id,
+        creator_id: creator.id,
+        plan,
+        amount,
+        payment_method: method,
+        status: "active",
+        expires_at: expiresAt.toISOString(),
+      }, { onConflict: "subscriber_id,creator_id" });
+
+      if (error) { toast.error("Erro ao ativar assinatura"); throw error; }
+    }
+
     setIsSubscribed(true);
     setCreator({ ...creator, subscribers_count: creator.subscribers_count + 1 });
-    toast.success("Assinatura ativada!");
   };
 
   const uploadBlob = async (blob: Blob, folder: string) => {
@@ -377,6 +402,7 @@ const CreatorProfile = () => {
         open={subscribeOpen}
         onClose={() => setSubscribeOpen(false)}
         creatorName={creator.name}
+        creatorId={creator.id}
         priceMonthly={creator.price_monthly}
         priceYearly={creator.price_yearly}
         onConfirm={handleSubscribeConfirm}
