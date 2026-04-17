@@ -1621,7 +1621,14 @@ const ConfiguracoesTab = () => {
 const PagamentosTab = () => {
   const { settings, refresh: refreshSettings } = useSiteSettings();
   const [mp, setMp] = useState({ enabled: false, access_token: "", public_key: "" });
-  const [appmax, setAppmax] = useState({ enabled: false, api_key: "", app_id: "", client_id: "", client_secret: "", is_sandbox: false, copied_webhook: false, generating: false });
+  const [appmax, setAppmax] = useState({
+    enabled: false, api_key: "", app_id: "", app_id_numeric: "",
+    client_id: "", client_secret: "", is_sandbox: false,
+    copied_webhook: false, generating: false,
+    merchant_client_id: "", installation_complete: false,
+    installing: false, generating_creds: false,
+    install_browser_url: "", install_hash: "",
+  });
   const [saving, setSaving] = useState<"mp" | "appmax" | "testmode" | null>(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -1631,7 +1638,19 @@ const PagamentosTab = () => {
       const mpRow = data.find((r: any) => r.gateway === "mercadopago");
       const amRow = data.find((r: any) => r.gateway === "appmax");
       if (mpRow) setMp({ enabled: mpRow.enabled, access_token: mpRow.credentials?.access_token ?? "", public_key: mpRow.credentials?.public_key ?? "" });
-      if (amRow) setAppmax({ enabled: amRow.enabled, api_key: amRow.credentials?.api_key ?? "", app_id: amRow.credentials?.app_id ?? "", client_id: amRow.credentials?.client_id ?? "", client_secret: amRow.credentials?.client_secret ?? "", is_sandbox: amRow.credentials?.is_sandbox ?? false, copied_webhook: false, generating: false });
+      if (amRow) setAppmax(p => ({
+        ...p,
+        enabled: amRow.enabled,
+        api_key: amRow.credentials?.api_key ?? "",
+        app_id: amRow.credentials?.app_id ?? "",
+        app_id_numeric: amRow.credentials?.app_id_numeric ?? "",
+        client_id: amRow.credentials?.client_id ?? "",
+        client_secret: amRow.credentials?.client_secret ?? "",
+        is_sandbox: amRow.credentials?.is_sandbox ?? false,
+        merchant_client_id: amRow.credentials?.merchant_client_id ?? "",
+        installation_complete: amRow.credentials?.installation_complete ?? false,
+        install_hash: amRow.credentials?.install_hash ?? "",
+      }));
       setLoaded(true);
     });
   }, []);
@@ -1658,7 +1677,7 @@ const PagamentosTab = () => {
   const saveAppmax = async () => {
     setSaving("appmax");
     await (supabase as any).from("payment_gateways").upsert(
-      { gateway: "appmax", enabled: appmax.enabled, credentials: { api_key: appmax.api_key, app_id: appmax.app_id, client_id: appmax.client_id, client_secret: appmax.client_secret, is_sandbox: appmax.is_sandbox } },
+      { gateway: "appmax", enabled: appmax.enabled, credentials: { api_key: appmax.api_key, app_id: appmax.app_id, app_id_numeric: appmax.app_id_numeric, client_id: appmax.client_id, client_secret: appmax.client_secret, is_sandbox: appmax.is_sandbox } },
       { onConflict: "gateway" }
     );
     setSaving(null);
@@ -1768,7 +1787,7 @@ const PagamentosTab = () => {
             <div>
               <p className="text-xs font-medium text-foreground">Ambiente Sandbox (Teste)</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                {appmax.is_sandbox ? "Usando: breakingcode.sandboxappmax.com.br" : "Usando: admin.appmax.com.br (produção)"}
+                {appmax.is_sandbox ? "Sandbox: auth.sandboxappmax.com.br" : "Produção: auth.appmax.com.br"}
               </p>
             </div>
             <button onClick={() => setAppmax(p => ({ ...p, is_sandbox: !p.is_sandbox }))}
@@ -1815,7 +1834,15 @@ const PagamentosTab = () => {
             <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Link2 className="w-3 h-3" /> App UUID</label>
             <input type="text" value={appmax.app_id} onChange={e => setAppmax(p => ({ ...p, app_id: e.target.value }))}
               placeholder="ex: 634a289e-c734-4694-908b-79fb2bf37959" className={fieldClass} autoComplete="off" />
-            <p className="text-[11px] text-muted-foreground">App UUID (não o Numerical ID) — recebido no e-mail</p>
+            <p className="text-[11px] text-muted-foreground">App UUID — recebido no e-mail de credenciais AppMax</p>
+          </div>
+
+          {/* App ID Numérico */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"><Link2 className="w-3 h-3" /> App ID Numérico</label>
+            <input type="text" value={appmax.app_id_numeric} onChange={e => setAppmax(p => ({ ...p, app_id_numeric: e.target.value }))}
+              placeholder="ex: 889" className={fieldClass} autoComplete="off" />
+            <p className="text-[11px] text-muted-foreground">ID numérico do app (ex: 889) — recebido no e-mail. Diferente do UUID acima.</p>
           </div>
 
           {/* Access Token (generated) */}
@@ -1855,6 +1882,103 @@ const PagamentosTab = () => {
               </button>
             </div>
             <p className="text-[11px] text-muted-foreground">Clique "Gerar Token" após preencher Client ID e Client Secret. O token expira em 1h — gere novamente se necessário.</p>
+          </div>
+
+          {/* ── Instalação AppStore ── */}
+          <div className={`rounded-lg border p-4 space-y-3 ${appmax.installation_complete ? "border-green-500/30 bg-green-500/5" : "border-border bg-secondary/30"}`}>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-foreground">Instalação AppMax AppStore</p>
+              {appmax.installation_complete
+                ? <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-500/15 text-green-500 uppercase tracking-wider">Instalado</span>
+                : <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-secondary text-muted-foreground uppercase tracking-wider">Pendente</span>}
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Conecte sua conta AppMax ao app. Preencha Client ID, Client Secret e App UUID acima, salve, depois siga os passos abaixo.
+            </p>
+
+            {/* Passo 1: Autorizar */}
+            <div className="space-y-2">
+              <p className="text-[11px] font-medium text-foreground">Passo 1 — Iniciar instalação</p>
+              <button
+                onClick={async () => {
+                  if (!appmax.client_id || !appmax.client_secret || !appmax.app_id) {
+                    toast.error("Preencha e salve Client ID, Client Secret e App UUID primeiro");
+                    return;
+                  }
+                  setAppmax(p => ({ ...p, installing: true, install_browser_url: "", install_hash: "" }));
+                  try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/appmax-install`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+                      body: JSON.stringify({ action: "authorize" }),
+                    });
+                    const data = await res.json();
+                    if (!data.ok) throw new Error(data.error || "Erro ao iniciar instalação");
+                    setAppmax(p => ({ ...p, install_browser_url: data.browser_url, install_hash: data.hash, installing: false }));
+                    toast.success("Link gerado! Abra no navegador e autorize.");
+                  } catch (err: any) {
+                    toast.error(err.message || "Erro ao iniciar instalação");
+                    setAppmax(p => ({ ...p, installing: false }));
+                  }
+                }}
+                disabled={appmax.installing}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50"
+              >
+                {appmax.installing ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Gerando link…</> : <><RefreshCw className="w-3.5 h-3.5" />Iniciar Instalação</>}
+              </button>
+              {appmax.install_browser_url && (
+                <div className="space-y-1.5">
+                  <p className="text-[11px] text-muted-foreground">Abra este link no navegador, faça login com as credenciais AppMax do merchant e autorize:</p>
+                  <div className="flex gap-2">
+                    <input readOnly value={appmax.install_browser_url}
+                      className="flex-1 px-3 py-2 text-[11px] bg-secondary border border-border rounded-lg text-muted-foreground font-mono truncate" />
+                    <button onClick={() => { navigator.clipboard.writeText(appmax.install_browser_url); toast.success("URL copiada!"); }}
+                      className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-secondary border border-border rounded-lg hover:bg-secondary/80 whitespace-nowrap">
+                      Copiar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Passo 2: Gerar credenciais */}
+            {appmax.install_hash && (
+              <div className="space-y-2 pt-1 border-t border-border">
+                <p className="text-[11px] font-medium text-foreground">Passo 2 — Confirmar instalação</p>
+                <p className="text-[11px] text-muted-foreground">Após autorizar no navegador, clique para gerar as credenciais do merchant:</p>
+                <button
+                  onClick={async () => {
+                    setAppmax(p => ({ ...p, generating_creds: true }));
+                    try {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/appmax-install`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+                        body: JSON.stringify({ action: "generate" }),
+                      });
+                      const data = await res.json();
+                      if (!data.ok) throw new Error(data.error || "Erro ao gerar credenciais");
+                      setAppmax(p => ({ ...p, merchant_client_id: data.merchant_client_id, installation_complete: true, generating_creds: false }));
+                      toast.success("Instalação concluída! Credenciais do merchant salvas.");
+                    } catch (err: any) {
+                      toast.error(err.message || "Erro ao gerar credenciais");
+                      setAppmax(p => ({ ...p, generating_creds: false }));
+                    }
+                  }}
+                  disabled={appmax.generating_creds}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                >
+                  {appmax.generating_creds ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Gerando…</> : <><CheckCircle className="w-3.5 h-3.5" />Confirmar Instalação</>}
+                </button>
+              </div>
+            )}
+
+            {appmax.installation_complete && appmax.merchant_client_id && (
+              <p className="text-[11px] text-green-500">
+                Merchant conectado — pagamentos processados via conta AppMax vinculada.
+              </p>
+            )}
           </div>
 
           <button onClick={saveAppmax} disabled={saving === "appmax"}

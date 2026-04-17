@@ -3,8 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const APPMAX_PROD_BASE    = "https://admin.appmax.com.br/api/v3";
 const APPMAX_SANDBOX_BASE = "https://breakingcode.sandboxappmax.com.br/api/v3";
-const APPMAX_PROD_OAUTH   = "https://admin.appmax.com.br";
-const APPMAX_SBX_OAUTH    = "https://breakingcode.sandboxappmax.com.br";
+const APPMAX_PROD_OAUTH   = "https://auth.appmax.com.br";
+const APPMAX_SBX_OAUTH    = "https://auth.sandboxappmax.com.br";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,10 +14,10 @@ const corsHeaders = {
 // ── Token management ──────────────────────────────────────────────────────────
 async function refreshAppmaxToken(clientId: string, clientSecret: string, isSandbox: boolean, supabaseAdmin: any): Promise<string> {
   const base = isSandbox ? APPMAX_SBX_OAUTH : APPMAX_PROD_OAUTH;
-  const res = await fetch(`${base}/oauth/token`, {
+  const res = await fetch(`${base}/oauth2/token`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret }),
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret }).toString(),
   });
   const data = await res.json();
   if (!data.access_token) throw new Error(data.message || data.error || "Não foi possível gerar token AppMax");
@@ -30,11 +30,13 @@ async function refreshAppmaxToken(clientId: string, clientSecret: string, isSand
 }
 
 async function getValidToken(creds: any, isSandbox: boolean, supabaseAdmin: any): Promise<string> {
+  const clientId = creds.merchant_client_id || creds.client_id;
+  const clientSecret = creds.merchant_client_secret || creds.client_secret;
   let token: string = creds.api_key ?? "";
   const expiresAt: string = creds.token_expires_at ?? "";
   const isExpired = !token || (expiresAt && new Date(expiresAt) <= new Date(Date.now() + 60_000));
-  if (isExpired && creds.client_id && creds.client_secret) {
-    token = await refreshAppmaxToken(creds.client_id, creds.client_secret, isSandbox, supabaseAdmin);
+  if (isExpired && clientId && clientSecret) {
+    token = await refreshAppmaxToken(clientId, clientSecret, isSandbox, supabaseAdmin);
   }
   return token;
 }
