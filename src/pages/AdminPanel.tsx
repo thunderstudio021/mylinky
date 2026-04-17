@@ -1860,10 +1860,15 @@ const PagamentosTab = () => {
                   );
                   setAppmax(p => ({ ...p, generating: true }));
                   try {
-                    const { data: { session } } = await supabase.auth.getSession();
+                    let { data: { session } } = await supabase.auth.getSession();
+                    if (!session?.access_token) {
+                      const { data: refreshed } = await supabase.auth.refreshSession();
+                      session = refreshed.session;
+                    }
+                    if (!session?.access_token) throw new Error("Sessão expirada. Faça login novamente.");
                     const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/appmax-checkout`, {
                       method: "POST",
-                      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+                      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
                       body: JSON.stringify({ action: "generate_token" }),
                     });
                     const data = await res.json();
@@ -1907,10 +1912,15 @@ const PagamentosTab = () => {
                   }
                   setAppmax(p => ({ ...p, installing: true, install_browser_url: "", install_hash: "" }));
                   try {
-                    const { data: { session } } = await supabase.auth.getSession();
+                    let { data: { session } } = await supabase.auth.getSession();
+                    if (!session?.access_token) {
+                      const { data: refreshed } = await supabase.auth.refreshSession();
+                      session = refreshed.session;
+                    }
+                    if (!session?.access_token) throw new Error("Sessão expirada. Faça login novamente.");
                     const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/appmax-install`, {
                       method: "POST",
-                      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+                      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
                       body: JSON.stringify({ action: "authorize" }),
                     });
                     const data = await res.json();
@@ -1951,10 +1961,15 @@ const PagamentosTab = () => {
                   onClick={async () => {
                     setAppmax(p => ({ ...p, generating_creds: true }));
                     try {
-                      const { data: { session } } = await supabase.auth.getSession();
+                      let { data: { session } } = await supabase.auth.getSession();
+                      if (!session?.access_token) {
+                        const { data: refreshed } = await supabase.auth.refreshSession();
+                        session = refreshed.session;
+                      }
+                      if (!session?.access_token) throw new Error("Sessão expirada. Faça login novamente.");
                       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/appmax-install`, {
                         method: "POST",
-                        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+                        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
                         body: JSON.stringify({ action: "generate" }),
                       });
                       const data = await res.json();
